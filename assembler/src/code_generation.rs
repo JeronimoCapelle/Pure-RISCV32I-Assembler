@@ -1,5 +1,6 @@
 use crate::structures::{
-    BType, IType, ITypeMemory, ITypeShifts, Instruction, Label, RType, Register, STypeMemory,
+    BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, Register,
+    STypeMemory,
 };
 
 pub fn assemble(instructions: Vec<Instruction>) -> Vec<u32> {
@@ -45,12 +46,10 @@ fn encode_instruction(instruction: Instruction) -> u32 {
             let funct3 = 5;
             generate_btype(funct3, btype)
         }
-        Instruction::JAL(jtype) => {
-            let opcode = 111;
-        }
+        Instruction::JAL(jtype) => generate_jtype(jtype),
         Instruction::JALR(itype_jump) => {
-            let opcode = 103;
-            let funct1 = 0;
+            let funct3 = 0;
+            generate_itype_jump(funct3, itype_jump)
         }
         Instruction::LW(itype_memory) => {
             let funct3 = 2;
@@ -109,40 +108,7 @@ fn encode_instruction(instruction: Instruction) -> u32 {
 }
 
 fn encode_register(register: Register) -> u32 {
-    match register {
-        Register::X0 => 0,
-        Register::X1 => 1,
-        Register::X2 => 2,
-        Register::X3 => 3,
-        Register::X4 => 4,
-        Register::X5 => 5,
-        Register::X6 => 6,
-        Register::X7 => 7,
-        Register::X8 => 8,
-        Register::X9 => 9,
-        Register::X10 => 10,
-        Register::X11 => 11,
-        Register::X12 => 12,
-        Register::X13 => 13,
-        Register::X14 => 14,
-        Register::X15 => 15,
-        Register::X16 => 16,
-        Register::X17 => 17,
-        Register::X18 => 18,
-        Register::X19 => 19,
-        Register::X20 => 20,
-        Register::X21 => 21,
-        Register::X22 => 22,
-        Register::X23 => 23,
-        Register::X24 => 24,
-        Register::X25 => 25,
-        Register::X26 => 26,
-        Register::X27 => 27,
-        Register::X28 => 28,
-        Register::X29 => 29,
-        Register::X30 => 30,
-        Register::X31 => 31,
-    }
+    register as u32
 }
 
 fn generate_rtype(funct3: u32, funct7: u32, rtype: RType) -> u32 {
@@ -200,13 +166,34 @@ fn generate_itype_memory(funct3: u32, itype_memory: ITypeMemory) -> u32 {
 
 fn generate_btype(funct3: u32, btype: BType) -> u32 {
     let opcode = 99;
-    let label_1 = ((btype.label.encode() >> 10) & 0b1) << 7;
-    let label_2 = ((btype.label.encode()) & 0b111) << 8;
+    let label_1 = ((btype.label.encode() >> 11) & 0b1) << 7;
+    let label_2 = ((btype.label.encode() >> 1) & 0b111) << 8;
     let funct3 = funct3 << 12;
     let first_source = encode_register(btype.first_source) << 15;
     let second_source = encode_register(btype.second_source) << 20;
     let label_3 = ((btype.label.encode() >> 5) & 0b111111) << 25;
-    let label_4 = ((btype.label.encode() >> 11) & 0b1) << 31;
+    let label_4 = ((btype.label.encode() >> 12) & 0b1) << 31;
 
     label_4 | label_3 | second_source | first_source | funct3 | label_2 | label_1 | opcode
+}
+
+fn generate_jtype(jtype: JType) -> u32 {
+    let opcode = 111;
+    let destination = encode_register(jtype.destination) << 7;
+    let label_1 = ((jtype.big_label.encode() >> 12) & 0b1111_1111) << 12;
+    let label_2 = ((jtype.big_label.encode() >> 11) & 0b1) << 20;
+    let label_3 = ((jtype.big_label.encode() >> 1) & 0b11_1111_1111) << 21;
+    let label_4 = ((jtype.big_label.encode() >> 20) & 0b1) << 31;
+
+    label_4 | label_3 | label_2 | label_1 | destination | opcode
+}
+
+fn generate_itype_jump(funct3: u32, itypejump: ITypeJump) -> u32 {
+    let opcode = 103;
+    let destination = encode_register(itypejump.destination) << 7;
+    let funct3 = funct3 << 12;
+    let source = encode_register(itypejump.target_address) << 15;
+    let immediate = itypejump.offset.encode() << 20;
+
+    immediate | source | funct3 | destination | opcode
 }

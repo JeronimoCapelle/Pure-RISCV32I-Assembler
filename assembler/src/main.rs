@@ -21,8 +21,8 @@ fn main() {
 
     let packed_instructions = code_generation::assemble(statements);
 
-    let binary_instructions = convert_bytes::transform(packed_instructions);
+    let binary_instructions = convert_bytes::transform(packed_instructions).unwrap();
 
     let mut file = std::fs::File::create("output.bin").unwrap();
-    file.write(binary_instructions.as_slice());
+    file.write_all(binary_instructions.as_slice()).unwrap();
 }

@@ -5,27 +5,31 @@ use crate::structures::{ParsingError::*, *};
 pub fn parse(
     tokens: &[Token],
     symbol_table: &HashMap<String, usize>,
-) -> Result<Vec<Instruction>, ParsingError> {
+) -> Result<Vec<Instruction>, TrackedError> {
     let mut statements: Vec<Instruction> = Vec::new();
     for (index, line) in tokens.split(|t| *t == Token::NewLine).enumerate() {
         if line.is_empty() {
             continue;
         }
         let pc_counter = index * 4;
-        statements.push(parse_statements(line, symbol_table, pc_counter)?);
+        statements.push(parse_statement(line, symbol_table, pc_counter)?);
     }
     Ok(statements)
 }
 
-fn parse_statements(
+fn parse_statement(
     tokens: &[Token],
     symbol_table: &HashMap<String, usize>,
     pc_counter: usize,
-) -> std::result::Result<Instruction, ParsingError> {
+) -> std::result::Result<Instruction, TrackedError> {
     let mnemonic = match &tokens[0] {
         Token::Identifier(a) => a,
         _ => {
-            return Err(SymbolError);
+            return Err(TrackedError {
+                kind: NonIdentifier,
+                line: line!(),
+                file: file!(),
+            });
         }
     };
 
@@ -41,7 +45,7 @@ fn parse_statements(
         "addi" => Instruction::ADDI(generate_itype(operands)?),
         "andi" => Instruction::ANDI(generate_itype(operands)?),
         "xori" => Instruction::XORI(generate_itype(operands)?),
-        "orii" => Instruction::ORI(generate_itype(operands)?),
+        "ori" => Instruction::ORI(generate_itype(operands)?),
 
         "slli" => Instruction::SLLI(generate_itype_shifts(operands)?),
         "srli" => Instruction::SRLI(generate_itype_shifts(operands)?),
@@ -61,7 +65,13 @@ fn parse_statements(
 
         "jalr" => Instruction::JALR(generate_itype_jump(operands)?),
 
-        _ => return Err(NonExistentOpcodeError),
+        _ => {
+            return Err(TrackedError {
+                kind: NonExistentMnemonic,
+                line: line!(),
+                file: file!(),
+            });
+        }
     })
 }
 
@@ -71,9 +81,13 @@ fn generate_jtype(
     operands: &[Token],
     pc_counter: usize,
     symbol_table: &HashMap<String, usize>,
-) -> Result<JType, ParsingError> {
-    if operands.len() != 3 || !operands[1].eq(&Token::Coma) {
-        return Err(WrongArgumentError);
+) -> Result<JType, TrackedError> {
+    if operands.len() != 3 || !operands[1].eq(&Token::Comma) {
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(JType {
@@ -86,9 +100,13 @@ fn generate_btype(
     operands: &[Token],
     pc_counter: usize,
     symbol_table: &HashMap<String, usize>,
-) -> Result<BType, ParsingError> {
-    if operands.len() != 5 || !operands[1].eq(&Token::Coma) || !operands[3].eq(&Token::Coma) {
-        return Err(WrongArgumentError);
+) -> Result<BType, TrackedError> {
+    if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(BType {
@@ -98,13 +116,17 @@ fn generate_btype(
     })
 }
 
-fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, ParsingError> {
+fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, TrackedError> {
     if operands.len() != 6
-        || !operands[1].eq(&Token::Coma)
+        || !operands[1].eq(&Token::Comma)
         || !operands[3].eq(&Token::OpeningParenthesis)
         || !operands[5].eq(&Token::ClosingParenthesis)
     {
-        return Err(WrongArgumentError);
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(STypeMemory {
@@ -114,13 +136,17 @@ fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, ParsingError
     })
 }
 
-fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, ParsingError> {
+fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, TrackedError> {
     if operands.len() != 6
-        || !operands[1].eq(&Token::Coma)
+        || !operands[1].eq(&Token::Comma)
         || !operands[3].eq(&Token::OpeningParenthesis)
         || !operands[5].eq(&Token::ClosingParenthesis)
     {
-        return Err(WrongArgumentError);
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(ITypeMemory {
@@ -130,9 +156,13 @@ fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, ParsingError
     })
 }
 
-fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, ParsingError> {
-    if operands.len() != 5 || !operands[1].eq(&Token::Coma) || !operands[3].eq(&Token::Coma) {
-        return Err(WrongArgumentError);
+fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, TrackedError> {
+    if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(ITypeShifts {
@@ -142,13 +172,17 @@ fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, ParsingError
     })
 }
 
-fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, ParsingError> {
+fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, TrackedError> {
     if operands.len() != 6
-        || !operands[1].eq(&Token::Coma)
+        || !operands[1].eq(&Token::Comma)
         || !operands[3].eq(&Token::OpeningParenthesis)
         || !operands[5].eq(&Token::ClosingParenthesis)
     {
-        return Err(WrongArgumentError);
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(ITypeJump {
@@ -158,9 +192,13 @@ fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, ParsingError> {
     })
 }
 
-fn generate_itype(operands: &[Token]) -> Result<IType, ParsingError> {
-    if operands.len() != 5 || !operands[1].eq(&Token::Coma) || !operands[3].eq(&Token::Coma) {
-        return Err(WrongArgumentError);
+fn generate_itype(operands: &[Token]) -> Result<IType, TrackedError> {
+    if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(IType {
@@ -170,9 +208,13 @@ fn generate_itype(operands: &[Token]) -> Result<IType, ParsingError> {
     })
 }
 
-fn generate_rtype(operands: &[Token]) -> Result<RType, ParsingError> {
-    if operands.len() != 5 || !operands[1].eq(&Token::Coma) || !operands[3].eq(&Token::Coma) {
-        return Err(WrongArgumentError);
+fn generate_rtype(operands: &[Token]) -> Result<RType, TrackedError> {
+    if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
+        return Err(TrackedError {
+            kind: WrongArgument,
+            line: line!(),
+            file: file!(),
+        });
     }
 
     Ok(RType {

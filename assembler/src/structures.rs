@@ -1,23 +1,33 @@
 use std::collections::HashMap;
 
 use crate::structures::ParsingError::{
-    BiggerValueError, NonExistentRegisterError, OddValueError, SmallerValueError, SymbolError,
-    TexttoNumericError,
+    BiggerValue, LabelTranslation, NonExistentRegister, NonIdentifier, NonLiteral, OddValue,
+    SmallerValue, TexttoNumeric,
 };
 
 //--------------------------------
 
 #[derive(Debug)]
+pub struct TrackedError {
+    pub kind: ParsingError,
+    pub line: u32,
+    pub file: &'static str, // Tracks the exact file (e.g., "src/structures.rs")
+}
+
+#[derive(Debug)]
 pub enum ParsingError {
-    BiggerValueError,
-    SmallerValueError,
-    OddValueError,
-    TexttoNumericError,
-    NonExistentRegisterError,
-    WrongArgumentError,
-    NonExistentOpcodeError,
-    TokenizerError,
-    SymbolError,
+    BiggerValue,
+    SmallerValue,
+    OddValue,
+    TexttoNumeric,
+    NonExistentRegister,
+    NonExistentMnemonic,
+    WrongArgument,
+    Tokenizer,
+    NonLiteral,
+    NonIdentifier,
+    LabelTranslation,
+    Empty,
 }
 
 //-----------------------
@@ -100,42 +110,66 @@ pub struct ITypeJump {
 pub struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
 
 impl Immediate {
-    pub fn new(token: &Token) -> Result<Immediate, ParsingError> {
+    pub fn new(token: &Token) -> Result<Immediate, TrackedError> {
         let value = match token {
             Token::Literal(a) => a,
             _ => {
-                return Err(SymbolError);
+                return Err(TrackedError {
+                    kind: NonLiteral,
+                    line: line!(),
+                    file: file!(),
+                });
             }
         };
         let numeric: i16;
 
         if value.starts_with("0b") {
-            numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8) {
+            numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 2) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         } else if value.starts_with("0x") {
             numeric = match i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         } else {
             numeric = match value.parse() {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         }
 
         if numeric < -2048 {
-            return Err(SmallerValueError);
+            return Err(TrackedError {
+                kind: SmallerValue,
+                line: line!(),
+                file: file!(),
+            });
         } else if numeric > 2047 {
-            return Err(BiggerValueError);
+            return Err(TrackedError {
+                kind: BiggerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
         Ok(Immediate(numeric))
     }
@@ -151,41 +185,61 @@ impl Immediate {
 pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
 
 impl Shamt {
-    pub fn new(token: &Token) -> Result<Shamt, ParsingError> {
+    pub fn new(token: &Token) -> Result<Shamt, TrackedError> {
         let value = match token {
             Token::Literal(a) => a,
             _ => {
-                return Err(SymbolError);
+                return Err(TrackedError {
+                    kind: NonLiteral,
+                    line: line!(),
+                    file: file!(),
+                });
             }
         };
 
         let numeric: u8;
 
         if value.starts_with("0b") {
-            numeric = match u8::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8) {
+            numeric = match u8::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 2) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         } else if value.starts_with("0x") {
             numeric = match u8::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         } else {
             numeric = match value.parse() {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         }
 
         if numeric > 31 {
-            return Err(BiggerValueError);
+            return Err(TrackedError {
+                kind: BiggerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
         Ok(Shamt(numeric))
     }
@@ -197,45 +251,69 @@ impl Shamt {
 pub struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
 
 impl Offset {
-    pub fn new(token: &Token) -> Result<Offset, ParsingError> {
+    pub fn new(token: &Token) -> Result<Offset, TrackedError> {
         let value = match token {
             Token::Literal(a) => a,
             _ => {
-                return Err(SymbolError);
+                return Err(TrackedError {
+                    kind: NonLiteral,
+                    line: line!(),
+                    file: file!(),
+                });
             }
         };
 
         let numeric: i16;
 
         if value.starts_with("0b") {
-            numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8) {
+            numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 2) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         } else if value.starts_with("0x") {
             numeric = match i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         } else {
             numeric = match value.parse() {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TexttoNumericError);
+                    return Err(TrackedError {
+                        kind: TexttoNumeric,
+                        line: line!(),
+                        file: file!(),
+                    });
                 }
             }
         }
 
         if numeric < -2048 {
-            return Err(SmallerValueError);
+            return Err(TrackedError {
+                kind: SmallerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
 
         if numeric > 2047 {
-            return Err(BiggerValueError);
+            return Err(TrackedError {
+                kind: BiggerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
         Ok(Offset(numeric))
     }
@@ -254,32 +332,57 @@ impl Label {
         token: &Token,
         symbol_table: &HashMap<String, usize>,
         current_pc: usize,
-    ) -> Result<Label, ParsingError> {
+    ) -> Result<Label, TrackedError> {
         let value = match token {
             Token::Identifier(a) => a,
             _ => {
-                return Err(SymbolError);
+                return Err(TrackedError {
+                    kind: NonIdentifier,
+                    line: line!(),
+                    file: file!(),
+                });
             }
         };
         if !symbol_table.contains_key(value) {
-            return Err(SymbolError);
+            return Err(TrackedError {
+                kind: LabelTranslation,
+                line: line!(),
+                file: file!(),
+            });
         }
-        let offset: i128 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
-            - i128::try_from(current_pc).unwrap())
-        .try_into()
-        .unwrap();
+        let offset: i128 = i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+            - i128::try_from(current_pc).unwrap();
         if offset % 2 != 0 {
-            return Err(OddValueError);
+            return Err(TrackedError {
+                kind: OddValue,
+                line: line!(),
+                file: file!(),
+            });
         }
         if offset < -4096 {
-            return Err(SmallerValueError);
+            return Err(TrackedError {
+                kind: SmallerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
 
         if offset > 4094 {
-            return Err(BiggerValueError);
+            return Err(TrackedError {
+                kind: BiggerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
 
         Ok(Label(offset.try_into().unwrap()))
+    }
+    pub fn encode(&self) -> u32 {
+        if self.0 >= 0 {
+            self.0 as u32
+        } else {
+            ((self.0 + 4096) as u32) | 4096
+        }
     }
 }
 pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
@@ -289,32 +392,57 @@ impl BigLabel {
         token: &Token,
         symbol_table: &HashMap<String, usize>,
         current_pc: usize,
-    ) -> Result<BigLabel, ParsingError> {
+    ) -> Result<BigLabel, TrackedError> {
         let value = match token {
             Token::Identifier(a) => a,
             _ => {
-                return Err(SymbolError);
+                return Err(TrackedError {
+                    kind: NonIdentifier,
+                    line: line!(),
+                    file: file!(),
+                });
             }
         };
         if !symbol_table.contains_key(value) {
-            return Err(SymbolError);
+            return Err(TrackedError {
+                kind: LabelTranslation,
+                line: line!(),
+                file: file!(),
+            });
         }
-        let offset: i128 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
-            - i128::try_from(current_pc).unwrap())
-        .try_into()
-        .unwrap();
+        let offset: i128 = i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+            - i128::try_from(current_pc).unwrap();
         if offset % 2 != 0 {
-            return Err(OddValueError);
+            return Err(TrackedError {
+                kind: OddValue,
+                line: line!(),
+                file: file!(),
+            });
         }
         if offset < -1_048_576 {
-            return Err(SmallerValueError);
+            return Err(TrackedError {
+                kind: SmallerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
 
         if offset > 1_048_574 {
-            return Err(BiggerValueError);
+            return Err(TrackedError {
+                kind: BiggerValue,
+                line: line!(),
+                file: file!(),
+            });
         }
 
         Ok(BigLabel(offset.try_into().unwrap()))
+    }
+    pub fn encode(&self) -> u32 {
+        if self.0 >= 0 {
+            self.0 as u32
+        } else {
+            ((self.0 + 1_048_576) as u32) | 1_048_576
+        }
     }
 }
 //--------------------------------------------------
@@ -355,11 +483,15 @@ pub enum Register {
 }
 
 impl Register {
-    pub fn new(token: &Token) -> Result<Register, ParsingError> {
+    pub fn new(token: &Token) -> Result<Register, TrackedError> {
         let name = match token {
             Token::Identifier(a) => a,
             _ => {
-                return Err(SymbolError);
+                return Err(TrackedError {
+                    kind: NonIdentifier,
+                    line: line!(),
+                    file: file!(),
+                });
             }
         };
 
@@ -466,7 +598,13 @@ impl Register {
             "x31" => Register::X31,
             "t6" => Register::X31,
 
-            _ => return Err(NonExistentRegisterError),
+            _ => {
+                return Err(TrackedError {
+                    kind: NonExistentRegister,
+                    line: line!(),
+                    file: file!(),
+                });
+            }
         })
     }
 }
@@ -478,7 +616,7 @@ pub enum Token {
     Literal(String),
     Identifier(String),
 
-    Coma,
+    Comma,
     Colon,
     OpeningParenthesis,
     ClosingParenthesis,
