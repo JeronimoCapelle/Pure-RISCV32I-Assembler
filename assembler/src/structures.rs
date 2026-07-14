@@ -1,5 +1,8 @@
+use std::collections::HashMap;
+
 use crate::structures::ParsingError::{
-    BiggerValueError, NonExistentRegisterError, SmallerValueError, SymbolError, TexttoNumericError,
+    BiggerValueError, NonExistentRegisterError, OddValueError, SmallerValueError, SymbolError,
+    TexttoNumericError,
 };
 
 //--------------------------------
@@ -8,6 +11,7 @@ use crate::structures::ParsingError::{
 pub enum ParsingError {
     BiggerValueError,
     SmallerValueError,
+    OddValueError,
     TexttoNumericError,
     NonExistentRegisterError,
     WrongArgumentError,
@@ -18,7 +22,7 @@ pub enum ParsingError {
 
 //-----------------------
 
-pub enum Mnemonic {
+pub enum Instruction {
     ADDI(IType),
     ADD(RType),
     SUB(RType),
@@ -135,6 +139,13 @@ impl Immediate {
         }
         Ok(Immediate(numeric))
     }
+    pub fn encode(&self) -> u32 {
+        if self.0 >= 0 {
+            self.0 as u32
+        } else {
+            ((self.0 + 2048) as u32) | 2048
+        }
+    }
 }
 
 pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
@@ -148,15 +159,38 @@ impl Shamt {
             }
         };
 
-        let value: u8 = match value.parse() {
-            Ok(a) => a,
-            Err(_) => return Err(TexttoNumericError),
-        };
+        let numeric: u8;
 
-        if value > 31 {
+        if value.starts_with("0b") {
+            numeric = match u8::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
+        } else if value.starts_with("0x") {
+            numeric = match u8::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
+        } else {
+            numeric = match value.parse() {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
+        }
+
+        if numeric > 31 {
             return Err(BiggerValueError);
         }
-        Ok(Shamt(value))
+        Ok(Shamt(numeric))
+    }
+    pub fn encode(&self) -> u32 {
+        self.0 as u32
     }
 }
 
@@ -171,30 +205,117 @@ impl Offset {
             }
         };
 
-        let value: i16 = match value.parse() {
-            Ok(a) => a,
-            Err(_) => return Err(TexttoNumericError),
-        };
+        let numeric: i16;
 
-        if value < -2048 {
+        if value.starts_with("0b") {
+            numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
+        } else if value.starts_with("0x") {
+            numeric = match i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
+        } else {
+            numeric = match value.parse() {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
+        }
+
+        if numeric < -2048 {
             return Err(SmallerValueError);
         }
 
-        if value > 2047 {
+        if numeric > 2047 {
             return Err(BiggerValueError);
         }
-        Ok(Offset(value))
+        Ok(Offset(numeric))
+    }
+    pub fn encode(&self) -> u32 {
+        if self.0 >= 0 {
+            self.0 as u32
+        } else {
+            ((self.0 + 2048) as u32) | 2048
+        }
     }
 }
-pub struct Label(i16); //12-bit signed PC-relative offset. limit artificially.
+pub struct Label(i16); //12-bit signed PC-relative offset. limit artificially. multiple of 2 bytes
 
 impl Label {
-    pub fn new() {}
+    pub fn new(
+        token: &Token,
+        symbol_table: &HashMap<String, usize>,
+        current_pc: usize,
+    ) -> Result<Label, ParsingError> {
+        let value = match token {
+            Token::Identifier(a) => a,
+            _ => {
+                return Err(SymbolError);
+            }
+        };
+        if !symbol_table.contains_key(value) {
+            return Err(SymbolError);
+        }
+        let offset: i16 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+            - i128::try_from(current_pc).unwrap())
+        .try_into()
+        .unwrap();
+        if offset % 2 != 0 {
+            return Err(OddValueError);
+        }
+        if offset < -4096 {
+            return Err(SmallerValueError);
+        }
+
+        if offset > 4094 {
+            return Err(BiggerValueError);
+        }
+
+        Ok(Label(offset))
+    }
 }
-pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially
+pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
 
 impl BigLabel {
-    pub fn new() {}
+    pub fn new(
+        token: &Token,
+        symbol_table: &HashMap<String, usize>,
+        current_pc: usize,
+    ) -> Result<BigLabel, ParsingError> {
+        let value = match token {
+            Token::Identifier(a) => a,
+            _ => {
+                return Err(SymbolError);
+            }
+        };
+        if !symbol_table.contains_key(value) {
+            return Err(SymbolError);
+        }
+        let offset: i32 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+            - i128::try_from(current_pc).unwrap())
+        .try_into()
+        .unwrap();
+        if offset % 2 != 0 {
+            return Err(OddValueError);
+        }
+        if offset < -1_048_576 {
+            return Err(SmallerValueError);
+        }
+
+        if offset > 1_048_574 {
+            return Err(BiggerValueError);
+        }
+
+        Ok(BigLabel(offset))
+    }
 }
 //--------------------------------------------------
 

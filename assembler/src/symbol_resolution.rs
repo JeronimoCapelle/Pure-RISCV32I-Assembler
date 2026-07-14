@@ -6,10 +6,10 @@ use std::collections::HashMap;
 
 pub fn collect_symbols(
     tokens: &[Token],
-) -> Result<(HashMap<String, u32>, Vec<Token>), ParsingError> {
-    let mut symbol_table: HashMap<String, u32> = HashMap::new();
+) -> Result<(HashMap<String, usize>, Vec<Token>), ParsingError> {
+    let mut symbol_table: HashMap<String, usize> = HashMap::new();
     let mut symbol_free_tokens: Vec<Token> = Vec::new();
-    let mut pc_counter: u32 = 0;
+    let mut pc_counter: usize = 0;
 
     for line in tokens.split(|t| *t == Token::NewLine) {
         if line.ends_with(&[Token::Colon]) && line.len() == 2 {
@@ -26,6 +26,8 @@ pub fn collect_symbols(
             symbol_free_tokens.push(Token::NewLine);
         }
     }
+
+    symbol_free_tokens.pop();
 
     Ok((symbol_table, symbol_free_tokens))
 }

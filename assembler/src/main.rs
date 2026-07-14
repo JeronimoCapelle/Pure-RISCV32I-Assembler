@@ -1,3 +1,4 @@
+mod code_generation;
 mod lexical_analysis;
 mod structures;
 mod symbol_resolution;
@@ -13,5 +14,7 @@ fn main() {
 
     let (labels, tokens) = symbol_resolution::collect_symbols(&tokens).unwrap();
 
-    let program = syntax_analysis::parse(&tokens, &labels).unwrap();
+    let statements = syntax_analysis::parse(&tokens, &labels).unwrap();
+
+    let binary = code_generation::assemble(&statements);
 }
