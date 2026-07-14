@@ -1,10 +1,8 @@
-use crate::{
-    opcode::ParsingError::{
-        BiggerValueError, NonExistentRegisterError, SmallerValueError, SymbolError,
-        TexttoNumericError,
-    },
-    tokens::Token,
+use crate::structures::ParsingError::{
+    BiggerValueError, NonExistentRegisterError, SmallerValueError, SymbolError, TexttoNumericError,
 };
+
+//--------------------------------
 
 #[derive(Debug)]
 pub enum ParsingError {
@@ -17,6 +15,8 @@ pub enum ParsingError {
     TokenizerError,
     SymbolError,
 }
+
+//-----------------------
 
 pub enum Mnemonic {
     ADDI(IType),
@@ -348,4 +348,18 @@ impl Register {
             _ => return Err(NonExistentRegisterError),
         })
     }
+}
+
+//--------------------------------------------------
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum Token {
+    Literal(String),
+    Identifier(String),
+
+    Coma,
+    Colon,
+    OpeningParenthesis,
+    ClosingParenthesis,
+    NewLine,
 }

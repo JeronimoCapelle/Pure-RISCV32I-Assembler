@@ -1,19 +1,19 @@
 use crate::{
-    opcode::ParsingError::{self, TokenizerError},
-    tokens::Token,
+    structures::ParsingError::{self, TokenizerError},
+    structures::Token,
 };
 
-pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
+pub fn tokenize(contents: &str) -> Result<Vec<Token>, ParsingError> {
     let contents: Vec<char> = contents.chars().collect();
 
-    let mut tokenized_contents: Vec<Token> = Vec::new();
+    let mut tokens: Vec<Token> = Vec::new();
 
     let mut i = 0;
 
     while i < contents.len() {
         match contents[i] {
             '\n' => {
-                tokenized_contents.push(Token::NewLine);
+                tokens.push(Token::NewLine);
                 i += 1;
             }
             char if char.is_whitespace() => {
@@ -32,19 +32,19 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
                 }
             }
             ',' => {
-                tokenized_contents.push(Token::Coma);
+                tokens.push(Token::Coma);
                 i += 1;
             }
             ':' => {
-                tokenized_contents.push(Token::Colon);
+                tokens.push(Token::Colon);
                 i += 1;
             }
             '(' => {
-                tokenized_contents.push(Token::OpeningParenthesis);
+                tokens.push(Token::OpeningParenthesis);
                 i += 1;
             }
             ')' => {
-                tokenized_contents.push(Token::ClosingParenthesis);
+                tokens.push(Token::ClosingParenthesis);
                 i += 1;
             }
 
@@ -65,7 +65,7 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
                     })
                     .unwrap_or(contents.len());
 
-                tokenized_contents.push(Token::Literal(
+                tokens.push(Token::Literal(
                     contents[i..i + end].iter().collect::<String>(),
                 ));
                 i += end;
@@ -88,7 +88,7 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
                     })
                     .unwrap_or(contents.len());
 
-                tokenized_contents.push(Token::Identifier(
+                tokens.push(Token::Identifier(
                     contents[i..i + end].iter().collect::<String>(),
                 ));
                 i += end;
@@ -99,5 +99,5 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
         };
     }
 
-    Ok(tokenized_contents)
+    Ok(tokens)
 }

@@ -1,8 +1,7 @@
-mod opcode;
-mod parser;
-mod symbol_table;
-mod tokenizer;
-mod tokens;
+mod lexical_analysis;
+mod structures;
+mod symbol_resolution;
+mod syntax_analysis;
 
 fn main() {
     let mut args = std::env::args().skip(1);
@@ -10,9 +9,9 @@ fn main() {
 
     let file_contents = std::fs::read_to_string(input_filename).expect("Failed to open file");
 
-    let tokens = tokenizer::tokenize_contents(&file_contents).unwrap();
+    let tokens = lexical_analysis::tokenize(&file_contents).unwrap();
 
-    let (labels, tokens) = symbol_table::extract_labels(&tokens).unwrap();
+    let (labels, tokens) = symbol_resolution::collect_symbols(&tokens).unwrap();
 
-    let program = parser::tokens_to_instructions(&tokens, &labels).unwrap();
+    let program = syntax_analysis::parse(&tokens, &labels).unwrap();
 }

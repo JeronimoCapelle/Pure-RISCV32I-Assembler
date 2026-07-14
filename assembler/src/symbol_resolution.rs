@@ -1,14 +1,14 @@
 use crate::{
-    opcode::ParsingError::{self, SymbolError},
-    tokens::Token,
+    structures::ParsingError::{self, SymbolError},
+    structures::Token,
 };
 use std::collections::HashMap;
 
-pub fn extract_labels(
+pub fn collect_symbols(
     tokens: &[Token],
 ) -> Result<(HashMap<String, u32>, Vec<Token>), ParsingError> {
     let mut symbol_table: HashMap<String, u32> = HashMap::new();
-    let mut label_free_tokens: Vec<Token> = Vec::new();
+    let mut symbol_free_tokens: Vec<Token> = Vec::new();
     let mut pc_counter: u32 = 0;
 
     for line in tokens.split(|t| *t == Token::NewLine) {
@@ -18,12 +18,14 @@ pub fn extract_labels(
                 _ => return Err(SymbolError),
             };
             symbol_table.insert(name.to_string(), pc_counter);
+        } else if line.is_empty() {
+            continue;
         } else {
             pc_counter += 4;
-            label_free_tokens.append(&mut line.to_vec());
-            label_free_tokens.push(Token::NewLine);
+            symbol_free_tokens.append(&mut line.to_vec());
+            symbol_free_tokens.push(Token::NewLine);
         }
     }
 
-    Ok((symbol_table, label_free_tokens))
+    Ok((symbol_table, symbol_free_tokens))
 }
