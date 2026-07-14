@@ -1,4 +1,3 @@
-mod label_resolver;
 mod opcode;
 mod parser;
 mod symbol_table;
@@ -13,7 +12,7 @@ fn main() {
 
     let tokens = tokenizer::tokenize_contents(&file_contents).unwrap();
 
-    let (labels, clean_tokens) = symbol_table::extract_labels(tokens).unwrap();
+    let (labels, tokens) = symbol_table::extract_labels(&tokens).unwrap();
 
-    let program = parser::tokens_to_instructions(clean_tokens, &labels).unwrap();
+    let program = parser::tokens_to_instructions(&tokens, &labels).unwrap();
 }

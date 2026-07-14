@@ -1,6 +1,7 @@
 use crate::{
     opcode::ParsingError::{
         BiggerValueError, NonExistentRegisterError, SmallerValueError, SymbolError,
+        TexttoNumericError,
     },
     tokens::Token,
 };
@@ -11,7 +12,7 @@ pub enum ParsingError {
     SmallerValueError,
     TexttoNumericError,
     NonExistentRegisterError,
-    WrongArgumentCountError,
+    WrongArgumentError,
     NonExistentOpcodeError,
     TokenizerError,
     SymbolError,
@@ -95,16 +96,36 @@ pub struct ITypeJump {
 pub struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
 
 impl Immediate {
-    pub fn new(value: &str) -> Result<Immediate, ParsingError> {
-        let value = value.trim();
+    pub fn new(token: &Token) -> Result<Immediate, ParsingError> {
+        let value = match token {
+            Token::Literal(a) => a,
+            _ => {
+                return Err(SymbolError);
+            }
+        };
         let numeric: i16;
 
         if value.starts_with("0b") {
-            numeric = i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8).unwrap();
+            numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 8) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
         } else if value.starts_with("0x") {
-            numeric = i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16).unwrap();
+            numeric = match i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
         } else {
-            numeric = value.parse().unwrap();
+            numeric = match value.parse() {
+                Ok(a) => a,
+                Err(_) => {
+                    return Err(TexttoNumericError);
+                }
+            }
         }
 
         if numeric < -2048 {
@@ -119,7 +140,19 @@ impl Immediate {
 pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
 
 impl Shamt {
-    pub fn new(value: u8) -> Result<Shamt, ParsingError> {
+    pub fn new(token: &Token) -> Result<Shamt, ParsingError> {
+        let value = match token {
+            Token::Literal(a) => a,
+            _ => {
+                return Err(SymbolError);
+            }
+        };
+
+        let value: u8 = match value.parse() {
+            Ok(a) => a,
+            Err(_) => return Err(TexttoNumericError),
+        };
+
         if value > 31 {
             return Err(BiggerValueError);
         }
@@ -130,7 +163,19 @@ impl Shamt {
 pub struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
 
 impl Offset {
-    pub fn new(value: i16) -> Result<Offset, ParsingError> {
+    pub fn new(token: &Token) -> Result<Offset, ParsingError> {
+        let value = match token {
+            Token::Literal(a) => a,
+            _ => {
+                return Err(SymbolError);
+            }
+        };
+
+        let value: i16 = match value.parse() {
+            Ok(a) => a,
+            Err(_) => return Err(TexttoNumericError),
+        };
+
         if value < -2048 {
             return Err(SmallerValueError);
         }

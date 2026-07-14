@@ -12,6 +12,10 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
 
     while i < contents.len() {
         match contents[i] {
+            '\n' => {
+                tokenized_contents.push(Token::NewLine);
+                i += 1;
+            }
             char if char.is_whitespace() => {
                 i += 1;
             }
@@ -43,10 +47,7 @@ pub fn tokenize_contents(contents: &str) -> Result<Vec<Token>, ParsingError> {
                 tokenized_contents.push(Token::ClosingParenthesis);
                 i += 1;
             }
-            '\n' => {
-                tokenized_contents.push(Token::NewLine);
-                i += 1;
-            }
+
             char if char.is_numeric() || char.eq(&'+') || char.eq(&'-') => {
                 let end = contents
                     .iter()

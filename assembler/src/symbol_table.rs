@@ -5,7 +5,7 @@ use crate::{
 use std::collections::HashMap;
 
 pub fn extract_labels(
-    tokens: Vec<Token>,
+    tokens: &[Token],
 ) -> Result<(HashMap<String, u32>, Vec<Token>), ParsingError> {
     let mut symbol_table: HashMap<String, u32> = HashMap::new();
     let mut label_free_tokens: Vec<Token> = Vec::new();
