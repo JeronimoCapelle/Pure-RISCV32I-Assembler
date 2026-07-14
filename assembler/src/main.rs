@@ -1,4 +1,7 @@
+use std::io::Write;
+
 mod code_generation;
+mod convert_bytes;
 mod lexical_analysis;
 mod structures;
 mod symbol_resolution;
@@ -16,5 +19,10 @@ fn main() {
 
     let statements = syntax_analysis::parse(&tokens, &labels).unwrap();
 
-    let binary = code_generation::assemble(&statements);
+    let packed_instructions = code_generation::assemble(statements);
+
+    let binary_instructions = convert_bytes::transform(packed_instructions);
+
+    let mut file = std::fs::File::create("output.bin").unwrap();
+    file.write(binary_instructions.as_slice());
 }

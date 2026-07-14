@@ -1,8 +1,8 @@
 use crate::structures::{
-    IType, ITypeShifts, Immediate, Instruction, RType, Register, STypeMemory, Shamt,
+    BType, IType, ITypeMemory, ITypeShifts, Instruction, Label, RType, Register, STypeMemory,
 };
 
-pub fn emit(instructions: Vec<Instruction>) -> Vec<u32> {
+pub fn assemble(instructions: Vec<Instruction>) -> Vec<u32> {
     let mut buffer: Vec<u32> = Vec::new();
 
     for i in instructions {
@@ -30,20 +30,20 @@ fn encode_instruction(instruction: Instruction) -> u32 {
             generate_rtype(funct3, funct7, rtype)
         }
         Instruction::BNE(btype) => {
-            let opcode = 99;
             let funct3 = 1;
+            generate_btype(funct3, btype)
         }
         Instruction::BEQ(btype) => {
-            let opcode = 99;
             let funct3 = 0;
+            generate_btype(funct3, btype)
         }
         Instruction::BLT(btype) => {
-            let opcode = 99;
             let funct3 = 4;
+            generate_btype(funct3, btype)
         }
         Instruction::BGE(btype) => {
-            let opcode = 99;
             let funct3 = 5;
+            generate_btype(funct3, btype)
         }
         Instruction::JAL(jtype) => {
             let opcode = 111;
@@ -53,16 +53,16 @@ fn encode_instruction(instruction: Instruction) -> u32 {
             let funct1 = 0;
         }
         Instruction::LW(itype_memory) => {
-            let opcode = 3;
             let funct3 = 2;
+            generate_itype_memory(funct3, itype_memory)
         }
         Instruction::SW(stype_memory) => {
             let funct3 = 2;
             generate_stype_memory(funct3, stype_memory)
         }
         Instruction::LB(itype_memory) => {
-            let opcode = 3;
             let funct3 = 0;
+            generate_itype_memory(funct3, itype_memory)
         }
         Instruction::SB(stype_memory) => {
             let funct3 = 0;
@@ -183,7 +183,30 @@ fn generate_stype_memory(funct3: u32, stype_memory: STypeMemory) -> u32 {
     let funct3 = funct3 << 12;
     let source = encode_register(stype_memory.source) << 15;
     let base_address = encode_register(stype_memory.base_address) << 20;
-    let offset_2 = (stype_memory.offset.encode() & 0b_111111100000) << 25;
+    let offset_2 = ((stype_memory.offset.encode() >> 5) & 0b_1111111) << 25;
 
     offset_2 | base_address | source | funct3 | offset_1 | opcode
+}
+
+fn generate_itype_memory(funct3: u32, itype_memory: ITypeMemory) -> u32 {
+    let opcode = 3;
+    let destination = encode_register(itype_memory.destination) << 7;
+    let funct3 = funct3 << 12;
+    let base_address = encode_register(itype_memory.base_address) << 15;
+    let offset = itype_memory.offset.encode() << 20;
+
+    offset | base_address | funct3 | destination | opcode
+}
+
+fn generate_btype(funct3: u32, btype: BType) -> u32 {
+    let opcode = 99;
+    let label_1 = ((btype.label.encode() >> 10) & 0b1) << 7;
+    let label_2 = ((btype.label.encode()) & 0b111) << 8;
+    let funct3 = funct3 << 12;
+    let first_source = encode_register(btype.first_source) << 15;
+    let second_source = encode_register(btype.second_source) << 20;
+    let label_3 = ((btype.label.encode() >> 5) & 0b111111) << 25;
+    let label_4 = ((btype.label.encode() >> 11) & 0b1) << 31;
+
+    label_4 | label_3 | second_source | first_source | funct3 | label_2 | label_1 | opcode
 }

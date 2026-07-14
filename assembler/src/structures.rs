@@ -264,7 +264,7 @@ impl Label {
         if !symbol_table.contains_key(value) {
             return Err(SymbolError);
         }
-        let offset: i16 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+        let offset: i128 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
             - i128::try_from(current_pc).unwrap())
         .try_into()
         .unwrap();
@@ -279,7 +279,7 @@ impl Label {
             return Err(BiggerValueError);
         }
 
-        Ok(Label(offset))
+        Ok(Label(offset.try_into().unwrap()))
     }
 }
 pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
@@ -299,7 +299,7 @@ impl BigLabel {
         if !symbol_table.contains_key(value) {
             return Err(SymbolError);
         }
-        let offset: i32 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+        let offset: i128 = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
             - i128::try_from(current_pc).unwrap())
         .try_into()
         .unwrap();
@@ -314,7 +314,7 @@ impl BigLabel {
             return Err(BiggerValueError);
         }
 
-        Ok(BigLabel(offset))
+        Ok(BigLabel(offset.try_into().unwrap()))
     }
 }
 //--------------------------------------------------
