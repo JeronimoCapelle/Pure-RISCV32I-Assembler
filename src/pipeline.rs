@@ -1,15 +1,15 @@
-use crate::structures::error::TrackedError;
+use crate::{auxiliar::error::AssemblerError, pipeline::_5_byte_convertion::transform};
 
-mod code_generation;
-mod convert_bytes;
-mod lexical_analysis;
-mod symbol_resolution;
-mod syntax_analysis;
+mod _1_lexical_analysis;
+mod _2_symbol_resolution;
+mod _3_syntax_analysis;
+mod _4_code_generation;
+mod _5_byte_convertion;
 
-pub fn compile_string(input: &str) -> Result<Vec<u8>, TrackedError> {
-    let tokens = lexical_analysis::tokenize(input)?;
-    let (labels, stripped_tokens) = symbol_resolution::collect_symbols(&tokens)?;
-    let statements = syntax_analysis::parse(&stripped_tokens, &labels)?;
-    let packed = code_generation::assemble(statements);
-    convert_bytes::transform(packed)
+pub fn compile_string(input: &str) -> Result<Vec<u8>, AssemblerError> {
+    let tokens = _1_lexical_analysis::tokenize(input)?;
+    let (labels, stripped_tokens) = _2_symbol_resolution::collect_symbols(&tokens)?;
+    let statements = _3_syntax_analysis::parse(&stripped_tokens, &labels)?;
+    let packed = _4_code_generation::assemble(statements);
+    Ok(transform(packed))
 }

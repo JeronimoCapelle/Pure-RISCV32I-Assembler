@@ -7,5 +7,5 @@ pub enum Token {
     Colon,
     OpeningParenthesis,
     ClosingParenthesis,
-    NewLine,
+    NewLine(usize),
 }

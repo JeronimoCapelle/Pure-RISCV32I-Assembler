@@ -1,4 +1,4 @@
-use crate::structures::instruction::*;
+use crate::auxiliar::instruction::*;
 
 pub fn assemble(instructions: Vec<Instruction>) -> Vec<u32> {
     let mut buffer: Vec<u32> = Vec::new();

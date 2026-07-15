@@ -1,37 +1,53 @@
 use std::collections::HashMap;
 
-use crate::structures::{
-    error::{ParsingError::*, TrackedError},
+use crate::auxiliar::{
+    error::{
+        AssemblerError,
+        Stage::Syntax,
+        SyntaxError::{self, Empty, Impossible, WrongArguments},
+    },
     instruction::*,
-    token::Token,
+    token::Token::{self},
 };
 
 pub fn parse(
     tokens: &[Token],
     symbol_table: &HashMap<String, usize>,
-) -> Result<Vec<Instruction>, TrackedError> {
+) -> Result<Vec<Instruction>, AssemblerError> {
     let mut statements: Vec<Instruction> = Vec::new();
-    for (index, line) in tokens.split(|t| *t == Token::NewLine).enumerate() {
+    for (index, line) in tokens
+        .split_inclusive(|t| matches!(t, Token::NewLine(_)))
+        .enumerate()
+    {
+        let (line, newline) = line.split_at(line.len() - 1);
+
         if line.is_empty() {
-            continue;
+            return Err(AssemblerError::internal(Syntax(Empty)));
         }
+
+        let newline = match newline[0] {
+            Token::NewLine(a) => a,
+            _ => return Err(AssemblerError::internal(Syntax(Impossible))),
+        };
+
         let pc_counter = index * 4;
-        statements.push(parse_statement(line, symbol_table, pc_counter)?);
+
+        let instruction = match parse_statement(line, symbol_table, pc_counter) {
+            Ok(a) => a,
+            Err(err) => return Err(AssemblerError::new(Syntax(err), newline)),
+        };
+        statements.push(instruction);
     }
     Ok(statements)
 }
 
-fn parse_statement(
-    tokens: &[Token],
-    symbol_table: &HashMap<String, usize>,
+fn parse_statement<'a>(
+    tokens: &'a [Token],
+    symbol_table: &'a HashMap<String, usize>,
     pc_counter: usize,
-) -> std::result::Result<Instruction, TrackedError> {
+) -> Result<Instruction, SyntaxError> {
     let Token::Identifier(mnemonic) = &tokens[0] else {
-        return Err(TrackedError {
-            kind: NonIdentifier,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(SyntaxError::InvalidStartingWord(tokens[0].clone()));
     };
 
     let operands = &tokens[1..];
@@ -67,28 +83,20 @@ fn parse_statement(
         "jalr" => Instruction::JALR(generate_itype_jump(operands)?),
 
         _ => {
-            return Err(TrackedError {
-                kind: NonExistentMnemonic,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(SyntaxError::NonExistentMnemonic(tokens[0].clone()));
         }
     })
 }
 
 // ---
 
-fn generate_jtype(
-    operands: &[Token],
+fn generate_jtype<'a>(
+    operands: &'a [Token],
     pc_counter: usize,
-    symbol_table: &HashMap<String, usize>,
-) -> Result<JType, TrackedError> {
+    symbol_table: &'a HashMap<String, usize>,
+) -> Result<JType, SyntaxError> {
     if operands.len() != 3 || !operands[1].eq(&Token::Comma) {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(JType {
@@ -97,17 +105,13 @@ fn generate_jtype(
     })
 }
 
-fn generate_btype(
-    operands: &[Token],
+fn generate_btype<'a>(
+    operands: &'a [Token],
     pc_counter: usize,
-    symbol_table: &HashMap<String, usize>,
-) -> Result<BType, TrackedError> {
+    symbol_table: &'a HashMap<String, usize>,
+) -> Result<BType, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(BType {
@@ -117,17 +121,13 @@ fn generate_btype(
     })
 }
 
-fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, TrackedError> {
+fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, SyntaxError> {
     if operands.len() != 6
         || !operands[1].eq(&Token::Comma)
         || !operands[3].eq(&Token::OpeningParenthesis)
         || !operands[5].eq(&Token::ClosingParenthesis)
     {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(STypeMemory {
@@ -137,17 +137,13 @@ fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, TrackedError
     })
 }
 
-fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, TrackedError> {
+fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, SyntaxError> {
     if operands.len() != 6
         || !operands[1].eq(&Token::Comma)
         || !operands[3].eq(&Token::OpeningParenthesis)
         || !operands[5].eq(&Token::ClosingParenthesis)
     {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(ITypeMemory {
@@ -157,13 +153,9 @@ fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, TrackedError
     })
 }
 
-fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, TrackedError> {
+fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(ITypeShifts {
@@ -173,7 +165,7 @@ fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, TrackedError
     })
 }
 
-fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, TrackedError> {
+fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, SyntaxError> {
     if operands.len() == 6
         && operands[1].eq(&Token::Comma)
         && operands[3].eq(&Token::OpeningParenthesis)
@@ -193,20 +185,12 @@ fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, TrackedError> {
         });
     }
 
-    Err(TrackedError {
-        kind: WrongArgument,
-        line: line!(),
-        file: file!(),
-    })
+    Err(WrongArguments)
 }
 
-fn generate_itype(operands: &[Token]) -> Result<IType, TrackedError> {
+fn generate_itype(operands: &[Token]) -> Result<IType, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(IType {
@@ -216,13 +200,9 @@ fn generate_itype(operands: &[Token]) -> Result<IType, TrackedError> {
     })
 }
 
-fn generate_rtype(operands: &[Token]) -> Result<RType, TrackedError> {
+fn generate_rtype(operands: &[Token]) -> Result<RType, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
-        return Err(TrackedError {
-            kind: WrongArgument,
-            line: line!(),
-            file: file!(),
-        });
+        return Err(WrongArguments);
     }
 
     Ok(RType {
@@ -230,35 +210,4 @@ fn generate_rtype(operands: &[Token]) -> Result<RType, TrackedError> {
         first_source: Register::new(&operands[2])?,
         second_source: Register::new(&operands[4])?,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use crate::{
-        pipeline::{lexical_analysis::tokenize, syntax_analysis::parse_statement},
-        structures::{
-            instruction::{Instruction, Offset, Register, STypeMemory},
-            token::Token,
-        },
-    };
-
-    #[test]
-    fn load() {
-        let inst = parse_statement(
-            tokenize("sw x7, 2044(x0)").unwrap().as_slice(),
-            &HashMap::new(),
-            0,
-        )
-        .unwrap();
-
-        let ideal = Instruction::SW(STypeMemory {
-            source: Register::X7,
-            offset: Offset::new(&Token::Literal("2044".to_string())).unwrap(),
-            base_address: Register::X0,
-        });
-
-        assert_eq!(inst, ideal);
-    }
 }

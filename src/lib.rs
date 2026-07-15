@@ -1,8 +1,8 @@
-use crate::structures::error::TrackedError;
+use crate::auxiliar::error::AssemblerError;
 
+mod auxiliar;
 mod pipeline;
-mod structures;
 
-pub fn compile_string(input: &str) -> Result<Vec<u8>, TrackedError> {
+pub fn compile_string(input: &str) -> Result<Vec<u8>, AssemblerError> {
     pipeline::compile_string(input)
 }

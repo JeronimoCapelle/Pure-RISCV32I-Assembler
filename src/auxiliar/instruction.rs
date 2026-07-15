@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
-use crate::structures::{
-    error::{
-        ParsingError::{
-            BiggerValue, LabelTranslation, NonExistentRegister, NonIdentifier, NonLiteral,
-            OddValue, SmallerValue, TexttoNumeric,
-        },
-        TrackedError,
+use crate::auxiliar::{
+    convertion::{i16_to_u32, i32_to_u32},
+    error::SyntaxError::{
+        self, BiggerValue, InvalidWord, NonExistentRegister, OddValue, SmallerValue, TexttoNumeric,
+        Translation,
     },
     token::Token,
 };
@@ -91,72 +89,46 @@ pub struct ITypeJump {
 pub struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
 
 impl Immediate {
-    pub fn new(token: &Token) -> Result<Immediate, TrackedError> {
+    pub fn new(token: &Token) -> Result<Immediate, SyntaxError> {
+        let max = 2047;
+        let min = -2048;
+
         let Token::Literal(value) = token else {
-            return Err(TrackedError {
-                kind: NonLiteral,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(InvalidWord(token.clone()));
         };
+
         let numeric: i16;
 
         if value.starts_with("0b") {
             numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 2) {
                 Ok(a) => a,
-                Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
-                }
+                Err(_) => return Err(TexttoNumeric(token.clone())),
             }
         } else if value.starts_with("0x") {
             numeric = match i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
                 Ok(a) => a,
-                Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
-                }
+                Err(_) => return Err(TexttoNumeric(token.clone())),
             }
         } else {
             numeric = match value.parse() {
                 Ok(a) => a,
-                Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
-                }
+                Err(_) => return Err(TexttoNumeric(token.clone())),
             }
         }
 
-        if numeric < -2048 {
-            return Err(TrackedError {
-                kind: SmallerValue,
-                line: line!(),
-                file: file!(),
-            });
-        } else if numeric > 2047 {
-            return Err(TrackedError {
-                kind: BiggerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if numeric < min {
+            return Err(SmallerValue(min as i32, numeric as i32));
+        } else if numeric > max {
+            return Err(BiggerValue(max as i32, numeric as i32));
         }
         Ok(Immediate(numeric))
     }
-    #[allow(clippy::cast_sign_loss)]
+
     pub fn encode(&self) -> u32 {
         if self.0 >= 0 {
-            self.0 as u32
+            i16_to_u32(self.0)
         } else {
-            ((self.0 + 2048) as u32) | 2048
+            i16_to_u32(self.0 + 2048) | 2048
         }
     }
 }
@@ -164,13 +136,11 @@ impl Immediate {
 pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
 
 impl Shamt {
-    pub fn new(token: &Token) -> Result<Shamt, TrackedError> {
+    pub fn new(token: &Token) -> Result<Shamt, SyntaxError> {
+        let max = 31;
+
         let Token::Literal(value) = token else {
-            return Err(TrackedError {
-                kind: NonLiteral,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(InvalidWord(token.clone()));
         };
 
         let numeric: u8;
@@ -179,43 +149,27 @@ impl Shamt {
             numeric = match u8::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 2) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
+                    return Err(TexttoNumeric(token.clone()));
                 }
             }
         } else if value.starts_with("0x") {
             numeric = match u8::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
+                    return Err(TexttoNumeric(token.clone()));
                 }
             }
         } else {
             numeric = match value.parse() {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
+                    return Err(TexttoNumeric(token.clone()));
                 }
             }
         }
 
-        if numeric > 31 {
-            return Err(TrackedError {
-                kind: BiggerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if numeric > max {
+            return Err(BiggerValue(max as i32, numeric as i32));
         }
         Ok(Shamt(numeric))
     }
@@ -227,13 +181,11 @@ impl Shamt {
 pub struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
 
 impl Offset {
-    pub fn new(token: &Token) -> Result<Offset, TrackedError> {
+    pub fn new(token: &Token) -> Result<Offset, SyntaxError> {
+        let max = 2047;
+        let min = -2048;
         let Token::Literal(value) = token else {
-            return Err(TrackedError {
-                kind: NonLiteral,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(InvalidWord(token.clone()));
         };
 
         let numeric: i16;
@@ -242,60 +194,39 @@ impl Offset {
             numeric = match i16::from_str_radix(value.strip_prefix("0b").unwrap().trim(), 2) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
+                    return Err(TexttoNumeric(token.clone()));
                 }
             }
         } else if value.starts_with("0x") {
             numeric = match i16::from_str_radix(value.strip_prefix("0x").unwrap().trim(), 16) {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
+                    return Err(TexttoNumeric(token.clone()));
                 }
             }
         } else {
             numeric = match value.parse() {
                 Ok(a) => a,
                 Err(_) => {
-                    return Err(TrackedError {
-                        kind: TexttoNumeric,
-                        line: line!(),
-                        file: file!(),
-                    });
+                    return Err(TexttoNumeric(token.clone()));
                 }
             }
         }
 
-        if numeric < -2048 {
-            return Err(TrackedError {
-                kind: SmallerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if numeric < min {
+            return Err(SmallerValue(min as i32, numeric as i32));
         }
 
-        if numeric > 2047 {
-            return Err(TrackedError {
-                kind: BiggerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if numeric > max {
+            return Err(BiggerValue(max as i32, numeric as i32));
         }
         Ok(Offset(numeric))
     }
-    #[allow(clippy::cast_sign_loss)]
     pub fn encode(&self) -> u32 {
         if self.0 >= 0 {
-            self.0 as u32
+            i16_to_u32(self.0)
         } else {
-            ((self.0 + 2048) as u32) | 2048
+            i16_to_u32(self.0 + 2048) | 2048
         }
     }
 }
@@ -307,54 +238,36 @@ impl Label {
         token: &Token,
         symbol_table: &HashMap<String, usize>,
         current_pc: usize,
-    ) -> Result<Label, TrackedError> {
+    ) -> Result<Label, SyntaxError> {
+        let min = -4096;
+        let max = 4094;
+
         let Token::Identifier(value) = token else {
-            return Err(TrackedError {
-                kind: NonIdentifier,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(InvalidWord(token.clone()));
         };
         if !symbol_table.contains_key(value) {
-            return Err(TrackedError {
-                kind: LabelTranslation,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(Translation(token.clone()));
         }
         let offset: i128 = i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
             - i128::try_from(current_pc).unwrap();
         if offset % 2 != 0 {
-            return Err(TrackedError {
-                kind: OddValue,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(OddValue(token.clone()));
         }
-        if offset < -4096 {
-            return Err(TrackedError {
-                kind: SmallerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if offset < min {
+            return Err(SmallerValue(min as i32, offset as i32));
         }
 
-        if offset > 4094 {
-            return Err(TrackedError {
-                kind: BiggerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if offset > max {
+            return Err(BiggerValue(max as i32, offset as i32));
         }
 
         Ok(Label(offset.try_into().unwrap()))
     }
-    #[allow(clippy::cast_sign_loss)]
     pub fn encode(&self) -> u32 {
         if self.0 >= 0 {
-            self.0 as u32
+            i16_to_u32(self.0)
         } else {
-            ((self.0 + 4096) as u32) | 4096
+            i16_to_u32(self.0 + 4096) | 4096
         }
     }
 }
@@ -366,54 +279,40 @@ impl BigLabel {
         token: &Token,
         symbol_table: &HashMap<String, usize>,
         current_pc: usize,
-    ) -> Result<BigLabel, TrackedError> {
+    ) -> Result<BigLabel, SyntaxError> {
+        let min = -1_048_576;
+        let max = 1_048_574;
+
         let Token::Identifier(value) = token else {
-            return Err(TrackedError {
-                kind: NonIdentifier,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(InvalidWord(token.clone()));
         };
         if !symbol_table.contains_key(value) {
-            return Err(TrackedError {
-                kind: LabelTranslation,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(Translation(token.clone()));
         }
-        let offset: i128 = i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
-            - i128::try_from(current_pc).unwrap();
+        let offset = (i128::try_from(*symbol_table.get(value).unwrap()).unwrap()
+            - i128::try_from(current_pc).unwrap())
+        .try_into()
+        .unwrap();
+
         if offset % 2 != 0 {
-            return Err(TrackedError {
-                kind: OddValue,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(OddValue(token.clone()));
         }
-        if offset < -1_048_576 {
-            return Err(TrackedError {
-                kind: SmallerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if offset < min {
+            return Err(SmallerValue(min, offset));
         }
 
-        if offset > 1_048_574 {
-            return Err(TrackedError {
-                kind: BiggerValue,
-                line: line!(),
-                file: file!(),
-            });
+        if offset > max {
+            return Err(BiggerValue(max, offset));
         }
 
-        Ok(BigLabel(offset.try_into().unwrap()))
+        Ok(BigLabel(offset))
     }
-    #[allow(clippy::cast_sign_loss)]
+
     pub fn encode(&self) -> u32 {
         if self.0 >= 0 {
-            self.0 as u32
+            i32_to_u32(self.0)
         } else {
-            ((self.0 + 1_048_576) as u32) | 1_048_576
+            i32_to_u32(self.0 + 1_048_576) | 1_048_576
         }
     }
 }
@@ -455,13 +354,9 @@ pub enum Register {
 }
 
 impl Register {
-    pub fn new(token: &Token) -> Result<Register, TrackedError> {
+    pub fn new(token: &Token) -> Result<Register, SyntaxError> {
         let Token::Identifier(name) = token else {
-            return Err(TrackedError {
-                kind: NonIdentifier,
-                line: line!(),
-                file: file!(),
-            });
+            return Err(InvalidWord(token.clone()));
         };
         Ok(match name.as_str() {
             "x0" | "zero" => Register::X0,
@@ -503,11 +398,7 @@ impl Register {
             "x30" | "t5" => Register::X30,
             "x31" | "t6" => Register::X31,
             _ => {
-                return Err(TrackedError {
-                    kind: NonExistentRegister,
-                    line: line!(),
-                    file: file!(),
-                });
+                return Err(NonExistentRegister(token.clone()));
             }
         })
     }

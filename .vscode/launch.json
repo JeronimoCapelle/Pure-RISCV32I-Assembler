@@ -8,8 +8,26 @@
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=assembler",
-                    "--package=assembler"
+                    "--bin=pure-rv32i",
+                    "--package=pure-rv32i"
+                ],
+                "filter": {
+                    "name": "pure-rv32i",
+                    "kind": "bin"
+                }
+            },
+            "args": ["input.txt"], 
+            "cwd": "${workspaceFolder}"
+        },
+        {
+         "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit-tests",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--bin=pure-rv32i",
+                    "--package=pure-rv32i"
                 ],
                 "filter": {
                     "name": "pure-rv32i",
