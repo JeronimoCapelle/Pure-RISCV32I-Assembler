@@ -1,4 +1,7 @@
-use crate::structures::{ParsingError::Tokenizer, Token, TrackedError};
+use crate::structures::{
+    error::{ParsingError::Tokenizer, TrackedError},
+    token::Token,
+};
 
 pub fn tokenize(contents: &str) -> Result<Vec<Token>, TrackedError> {
     let contents: Vec<char> = contents.chars().collect();
@@ -112,7 +115,7 @@ pub fn tokenize(contents: &str) -> Result<Vec<Token>, TrackedError> {
 }
 #[cfg(test)]
 mod tests {
-    use crate::{lexical_analysis::tokenize, structures::Token};
+    use crate::{pipeline::lexical_analysis::tokenize, structures::token::Token};
 
     #[test]
     fn label() {

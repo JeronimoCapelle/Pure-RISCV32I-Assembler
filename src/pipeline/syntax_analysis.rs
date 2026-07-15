@@ -1,10 +1,9 @@
 use std::collections::HashMap;
 
 use crate::structures::{
-    BType, BigLabel, IType, ITypeJump, ITypeMemory, ITypeShifts, Immediate, Instruction, JType,
-    Label, Offset,
-    ParsingError::{NonExistentMnemonic, NonIdentifier, WrongArgument},
-    RType, Register, STypeMemory, Shamt, Token, TrackedError,
+    error::{ParsingError::*, TrackedError},
+    instruction::*,
+    token::Token,
 };
 
 pub fn parse(
@@ -238,9 +237,11 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        lexical_analysis::tokenize,
-        structures::{Instruction, Offset, Register, STypeMemory, Token},
-        syntax_analysis::parse_statement,
+        pipeline::{lexical_analysis::tokenize, syntax_analysis::parse_statement},
+        structures::{
+            instruction::{Instruction, Offset, Register, STypeMemory},
+            token::Token,
+        },
     };
 
     #[test]

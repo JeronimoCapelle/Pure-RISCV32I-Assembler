@@ -1,5 +1,9 @@
-use crate::structures::{ParsingError::NonIdentifier, Token, TrackedError};
 use std::collections::HashMap;
+
+use crate::structures::{
+    error::{ParsingError::NonIdentifier, TrackedError},
+    token::Token,
+};
 
 pub fn collect_symbols(
     tokens: &[Token],
@@ -33,7 +37,9 @@ pub fn collect_symbols(
 #[cfg(test)]
 mod tests {
 
-    use crate::{lexical_analysis::tokenize, symbol_resolution::collect_symbols};
+    use crate::{
+        pipeline::lexical_analysis::tokenize, pipeline::symbol_resolution::collect_symbols,
+    };
 
     #[test]
     fn empty_table() {

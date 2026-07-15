@@ -1,6 +1,4 @@
-use crate::structures::{
-    BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, STypeMemory,
-};
+use crate::structures::instruction::*;
 
 pub fn assemble(instructions: Vec<Instruction>) -> Vec<u32> {
     let mut buffer: Vec<u32> = Vec::new();

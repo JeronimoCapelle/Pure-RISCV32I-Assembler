@@ -1,4 +1,4 @@
-use crate::structures::{ParsingError::Empty, TrackedError};
+use crate::structures::error::{ParsingError::Empty, *};
 
 pub fn transform(input: Vec<u32>) -> Result<Vec<u8>, TrackedError> {
     if input.is_empty() {
