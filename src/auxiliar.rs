@@ -1,5 +1,5 @@
-pub mod convertion;
-pub mod error;
-pub mod instruction;
-pub mod operands;
-pub mod token;
+pub(crate) mod convertion;
+pub(crate) mod error;
+pub(crate) mod instruction;
+pub(crate) mod operands;
+pub(crate) mod token;

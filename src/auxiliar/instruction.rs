@@ -2,7 +2,7 @@ use crate::auxiliar::operands::{BigLabel, Immediate, Label, Offset, Register, Sh
 
 #[derive(PartialEq, Eq, Debug)]
 #[allow(clippy::upper_case_acronyms)]
-pub enum Instruction {
+pub(crate) enum Instruction {
     ADDI(IType),
     ADD(RType),
     SUB(RType),
@@ -28,48 +28,48 @@ pub enum Instruction {
 
 //--------------------------------------------------
 #[derive(PartialEq, Eq, Debug)]
-pub struct RType {
+pub(crate) struct RType {
     pub destination: Register,
     pub first_source: Register,
     pub second_source: Register,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct IType {
+pub(crate) struct IType {
     pub destination: Register,
     pub source: Register,
     pub immediate: Immediate,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct ITypeShifts {
+pub(crate) struct ITypeShifts {
     pub destination: Register,
     pub source: Register,
     pub shamt: Shamt,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct ITypeMemory {
+pub(crate) struct ITypeMemory {
     pub destination: Register,
     pub offset: Offset,
     pub base_address: Register,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct STypeMemory {
+pub(crate) struct STypeMemory {
     pub source: Register,
     pub offset: Offset,
     pub base_address: Register,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct BType {
+pub(crate) struct BType {
     pub first_source: Register,
     pub second_source: Register,
     pub label: Label,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct JType {
+pub(crate) struct JType {
     pub destination: Register,
     pub big_label: BigLabel,
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct ITypeJump {
+pub(crate) struct ITypeJump {
     pub destination: Register,
     pub offset: Offset,
     pub target_address: Register,

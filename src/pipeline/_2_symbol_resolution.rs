@@ -8,7 +8,7 @@ use crate::auxiliar::{
     token::Token,
 };
 
-pub fn collect_symbols(
+pub(super) fn collect_symbols(
     tokens: &[Token],
 ) -> Result<(HashMap<String, usize>, Vec<Token>), AssemblerError> {
     let mut symbol_table: HashMap<String, usize> = HashMap::new();

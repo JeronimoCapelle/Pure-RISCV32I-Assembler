@@ -1,4 +1,6 @@
-use crate::{auxiliar::error::AssemblerError, pipeline::_5_byte_convertion::transform};
+//! pipeline manager which is in charge of executing each step of the assembly and return an error if encountered.
+
+use crate::auxiliar::error::AssemblerError;
 
 mod _1_lexical_analysis;
 mod _2_symbol_resolution;
@@ -6,10 +8,10 @@ mod _3_syntax_analysis;
 mod _4_code_generation;
 mod _5_byte_convertion;
 
-pub fn compile_string(input: &str) -> Result<Vec<u8>, AssemblerError> {
-    let tokens = _1_lexical_analysis::tokenize(input)?;
-    let (labels, stripped_tokens) = _2_symbol_resolution::collect_symbols(&tokens)?;
-    let statements = _3_syntax_analysis::parse(&stripped_tokens, &labels)?;
-    let packed = _4_code_generation::assemble(statements);
-    Ok(transform(packed))
+pub(crate) fn compile_string(input: &str) -> Result<Vec<u8>, AssemblerError> {
+    let extracted_tokens = _1_lexical_analysis::tokenize(input)?;
+    let (labels_map, stripped_tokens) = _2_symbol_resolution::collect_symbols(&extracted_tokens)?;
+    let instructions = _3_syntax_analysis::parse(&stripped_tokens, &labels_map)?;
+    let assembled_binary = _4_code_generation::assemble(instructions);
+    Ok(_5_byte_convertion::transform(assembled_binary))
 }

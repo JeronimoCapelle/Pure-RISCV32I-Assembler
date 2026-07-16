@@ -3,7 +3,7 @@ use crate::auxiliar::{
     token::Token,
 };
 
-pub fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError> {
+pub(super) fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError> {
     let contents: Vec<char> = contents_str.chars().collect();
 
     let mut tokens: Vec<Token> = Vec::new();

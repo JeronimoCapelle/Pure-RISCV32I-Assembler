@@ -2,7 +2,7 @@ use crate::auxiliar::instruction::{
     BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, STypeMemory,
 };
 
-pub fn assemble(instructions: Vec<Instruction>) -> Vec<u32> {
+pub(super) fn assemble(instructions: Vec<Instruction>) -> Vec<u32> {
     let mut buffer: Vec<u32> = Vec::new();
 
     for i in instructions {

@@ -1,4 +1,4 @@
-use pure_rv32i::compile_string;
+use pure_rv32i::assemble_string;
 
 #[test]
 fn test_core_execution_loop() {
@@ -17,7 +17,7 @@ fn test_core_execution_loop() {
         0xEF, 0xF1, 0x5F, 0xFF, // jal x3, _start (-12 bytes offset)
     ];
 
-    let result = compile_string(assembly).expect("Compilation failed");
+    let result = assemble_string(assembly).expect("Compilation failed");
 
     assert_eq!(result, expected_binary);
 }
@@ -52,7 +52,7 @@ fn stress_test() {
         _end:
             jalr x0, 0(x10)";
 
-    let result = compile_string(source_code).expect("Compilation failed");
+    let result = assemble_string(source_code).expect("Compilation failed");
 
     let binary: Vec<u8> = vec![
         0x93, 0x00, 0x00, 0x80, // addi x1, x0, -2048

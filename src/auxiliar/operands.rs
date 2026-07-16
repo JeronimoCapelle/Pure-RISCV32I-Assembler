@@ -11,10 +11,10 @@ use crate::auxiliar::{
 
 //--------------------------------------------------
 #[derive(PartialEq, Eq, Debug)]
-pub struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
+pub(crate) struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
 
 impl Immediate {
-    pub fn new(token: &Token) -> Result<Self, SyntaxError> {
+    pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 2047;
         let min = -2048;
 
@@ -23,7 +23,7 @@ impl Immediate {
         };
 
         let Ok(value) = interpret_literal(text) else {
-            return Err(TexttoNumeric(token.clone()));
+            return Err(TexttoNumeric(text.to_owned()));
         };
 
         if value > max {
@@ -41,15 +41,15 @@ impl Immediate {
         Ok(Self(value))
     }
 
-    pub const fn encode(&self) -> u32 {
+    pub(crate) const fn encode(&self) -> u32 {
         (self.0.cast_unsigned() as u32) & 0b1111_1111_1111
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
+pub(crate) struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
 
 impl Shamt {
-    pub fn new(token: &Token) -> Result<Self, SyntaxError> {
+    pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 31;
         let min = 0;
 
@@ -58,7 +58,7 @@ impl Shamt {
         };
 
         let Ok(value) = interpret_literal(text) else {
-            return Err(TexttoNumeric(token.clone()));
+            return Err(TexttoNumeric(text.to_owned()));
         };
 
         if value > max {
@@ -75,15 +75,15 @@ impl Shamt {
 
         Ok(Self(value))
     }
-    pub fn encode(&self) -> u32 {
+    pub(crate) fn encode(&self) -> u32 {
         u32::from(self.0)
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
+pub(crate) struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
 
 impl Offset {
-    pub fn new(token: &Token) -> Result<Self, SyntaxError> {
+    pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 2047;
         let min = -2048;
 
@@ -92,7 +92,7 @@ impl Offset {
         };
 
         let Ok(value) = interpret_literal(text) else {
-            return Err(TexttoNumeric(token.clone()));
+            return Err(TexttoNumeric(text.to_owned()));
         };
 
         if value > max {
@@ -109,15 +109,15 @@ impl Offset {
 
         Ok(Self(value))
     }
-    pub const fn encode(&self) -> u32 {
+    pub(crate) const fn encode(&self) -> u32 {
         (self.0.cast_unsigned() as u32) & 0b1111_1111_1111
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct Label(i16); //12-bit signed PC-relative offset. limit artificially. multiple of 2 bytes
+pub(crate) struct Label(i16); //12-bit signed PC-relative offset. limit artificially. multiple of 2 bytes
 
 impl Label {
-    pub fn new(
+    pub(crate) fn new(
         token: &Token,
         symbol_table: &HashMap<String, usize>,
         current_pc: usize,
@@ -131,7 +131,7 @@ impl Label {
 
         let symbol_pc = match symbol_table.get(text) {
             Some(a) => *a,
-            None => return Err(Translation(token.clone())),
+            None => return Err(Translation(text.to_owned())),
         };
 
         let Ok(symbol_pc) = i128::try_from(symbol_pc) else {
@@ -144,7 +144,7 @@ impl Label {
         let offset = symbol_pc - current_pc;
 
         if offset % 2 != 0 {
-            return Err(OddValue(token.clone()));
+            return Err(OddValue(offset));
         }
 
         if offset < min {
@@ -161,15 +161,15 @@ impl Label {
 
         Ok(Self(offset))
     }
-    pub const fn encode(&self) -> u32 {
+    pub(crate) const fn encode(&self) -> u32 {
         ((self.0 >> 1) as u32) & 0b1111_1111_1111
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
+pub(crate) struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
 
 impl BigLabel {
-    pub fn new(
+    pub(crate) fn new(
         token: &Token,
         symbol_table: &HashMap<String, usize>,
         current_pc: usize,
@@ -183,7 +183,7 @@ impl BigLabel {
 
         let symbol_pc = match symbol_table.get(text) {
             Some(a) => *a,
-            None => return Err(Translation(token.clone())),
+            None => return Err(Translation(text.to_owned())),
         };
 
         let Ok(symbol_pc) = i128::try_from(symbol_pc) else {
@@ -197,7 +197,7 @@ impl BigLabel {
         let offset = symbol_pc - current_pc;
 
         if offset % 2 != 0 {
-            return Err(OddValue(token.clone()));
+            return Err(OddValue(offset));
         }
 
         if offset < min {
@@ -214,13 +214,13 @@ impl BigLabel {
         Ok(Self(offset))
     }
 
-    pub const fn encode(&self) -> u32 {
+    pub(crate) const fn encode(&self) -> u32 {
         ((self.0 >> 1) as u32) & 0b1111_1111_1111_1111_1111
     }
 }
 //--------------------------------------------------
 #[derive(PartialEq, Eq, Debug)]
-pub enum Register {
+pub(crate) enum Register {
     X0,
     X1,
     X2,
@@ -256,7 +256,7 @@ pub enum Register {
 }
 
 impl Register {
-    pub fn new(token: &Token) -> Result<Self, SyntaxError> {
+    pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let Token::Identifier(name) = token else {
             return Err(InvalidToken(token.clone()));
         };
@@ -300,7 +300,7 @@ impl Register {
             "x30" | "t5" => Self::X30,
             "x31" | "t6" => Self::X31,
             _ => {
-                return Err(NonExistentRegister(token.clone()));
+                return Err(NonExistentRegister(name.to_owned()));
             }
         })
     }

@@ -4,7 +4,7 @@ use crate::auxiliar::{
     error::{
         AssemblerError,
         Stage::Syntax,
-        SyntaxError::{self, Empty, Internal, WrongArguments},
+        SyntaxError::{self, Internal, WrongArguments},
     },
     instruction::{
         BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, STypeMemory,
@@ -13,7 +13,7 @@ use crate::auxiliar::{
     token::Token,
 };
 
-pub fn parse(
+pub(super) fn parse(
     tokens: &[Token],
     symbol_table: &HashMap<String, usize>,
 ) -> Result<Vec<Instruction>, AssemblerError> {
@@ -25,7 +25,7 @@ pub fn parse(
         let (line, newline) = line.split_at(line.len() - 1);
 
         if line.is_empty() {
-            return Err(AssemblerError::internal(Syntax(Empty)));
+            return Err(AssemblerError::internal(Syntax(Internal)));
         }
 
         let Token::NewLine(newline) = newline[0] else {
@@ -49,7 +49,7 @@ fn parse_statement(
     pc_counter: usize,
 ) -> Result<Instruction, SyntaxError> {
     let Token::Identifier(mnemonic) = &tokens[0] else {
-        return Err(SyntaxError::InvalidStartingWord(tokens[0].clone()));
+        return Err(SyntaxError::InvalidToken(tokens[0].clone()));
     };
 
     let operands = &tokens[1..];
@@ -85,7 +85,7 @@ fn parse_statement(
         "jalr" => Instruction::JALR(generate_itype_jump(operands)?),
 
         _ => {
-            return Err(SyntaxError::NonExistentMnemonic(tokens[0].clone()));
+            return Err(SyntaxError::NonExistentMnemonic(mnemonic.to_owned()));
         }
     })
 }

@@ -1,9 +1,11 @@
-use crate::auxiliar::error::AssemblerError;
+//! Public endpoint for the assembler as a library. Returns custom Error type with all info needed.
 
-pub mod auxiliar;
+pub use crate::auxiliar::error::AssemblerError;
+
+mod auxiliar;
 mod pipeline;
 
-pub fn compile_string(input: &str) -> Result<Vec<u8>, AssemblerError> {
+pub fn assemble_string(input: &str) -> Result<Vec<u8>, AssemblerError> {
     match pipeline::compile_string(input) {
         Ok(a) => Ok(a),
         Err(mut a) => {
