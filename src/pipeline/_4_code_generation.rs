@@ -179,13 +179,13 @@ const fn generate_itype_memory(funct3: u32, itype_memory: ITypeMemory) -> u32 {
 
 const fn generate_btype(funct3: u32, btype: BType) -> u32 {
     let opcode = 99;
-    let label_1 = ((btype.label.encode() >> 11) & 0b1) << 7;
-    let label_2 = ((btype.label.encode() >> 1) & 0b1111) << 8;
+    let label_1 = ((btype.label.encode() >> 10) & 0b1) << 7;
+    let label_2 = ((btype.label.encode()) & 0b1111) << 8;
     let funct3 = funct3 << 12;
     let first_source = (btype.first_source as u32) << 15;
     let second_source = (btype.second_source as u32) << 20;
-    let label_3 = ((btype.label.encode() >> 5) & 0b11_1111) << 25;
-    let label_4 = ((btype.label.encode() >> 12) & 0b1) << 31;
+    let label_3 = ((btype.label.encode() >> 4) & 0b11_1111) << 25;
+    let label_4 = ((btype.label.encode() >> 11) & 0b1) << 31;
 
     label_4 | label_3 | second_source | first_source | funct3 | label_2 | label_1 | opcode
 }
@@ -193,10 +193,10 @@ const fn generate_btype(funct3: u32, btype: BType) -> u32 {
 const fn generate_jtype(jtype: JType) -> u32 {
     let opcode = 111;
     let destination = (jtype.destination as u32) << 7;
-    let label_1 = ((jtype.big_label.encode() >> 12) & 0b1111_1111) << 12;
-    let label_2 = ((jtype.big_label.encode() >> 11) & 0b1) << 20;
-    let label_3 = ((jtype.big_label.encode() >> 1) & 0b11_1111_1111) << 21;
-    let label_4 = ((jtype.big_label.encode() >> 20) & 0b1) << 31;
+    let label_1 = ((jtype.big_label.encode() >> 11) & 0b1111_1111) << 12;
+    let label_2 = ((jtype.big_label.encode() >> 10) & 0b1) << 20;
+    let label_3 = ((jtype.big_label.encode()) & 0b11_1111_1111) << 21;
+    let label_4 = ((jtype.big_label.encode() >> 19) & 0b1) << 31;
 
     label_4 | label_3 | label_2 | label_1 | destination | opcode
 }

@@ -162,7 +162,7 @@ impl Label {
         Ok(Self(offset))
     }
     pub const fn encode(&self) -> u32 {
-        (self.0.cast_unsigned() as u32) & 0b1111_1111_1111
+        ((self.0 >> 1) as u32) & 0b1111_1111_1111
     }
 }
 #[derive(PartialEq, Eq, Debug)]
@@ -215,7 +215,7 @@ impl BigLabel {
     }
 
     pub const fn encode(&self) -> u32 {
-        (self.0 as u16 as u32) & 0b1111_1111_1111_1111_1111
+        ((self.0 >> 1) as u32) & 0b1111_1111_1111_1111_1111
     }
 }
 //--------------------------------------------------
