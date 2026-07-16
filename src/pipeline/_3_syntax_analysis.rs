@@ -43,9 +43,9 @@ pub fn parse(
     Ok(statements)
 }
 
-fn parse_statement<'a>(
-    tokens: &'a [Token],
-    symbol_table: &'a HashMap<String, usize>,
+fn parse_statement(
+    tokens: &[Token],
+    symbol_table: &HashMap<String, usize>,
     pc_counter: usize,
 ) -> Result<Instruction, SyntaxError> {
     let Token::Identifier(mnemonic) = &tokens[0] else {
@@ -92,10 +92,10 @@ fn parse_statement<'a>(
 
 // ---
 
-fn generate_jtype<'a>(
-    operands: &'a [Token],
+fn generate_jtype(
+    operands: &[Token],
     pc_counter: usize,
-    symbol_table: &'a HashMap<String, usize>,
+    symbol_table: &HashMap<String, usize>,
 ) -> Result<JType, SyntaxError> {
     if operands.len() != 3 || !operands[1].eq(&Token::Comma) {
         return Err(WrongArguments);
@@ -107,10 +107,10 @@ fn generate_jtype<'a>(
     })
 }
 
-fn generate_btype<'a>(
-    operands: &'a [Token],
+fn generate_btype(
+    operands: &[Token],
     pc_counter: usize,
-    symbol_table: &'a HashMap<String, usize>,
+    symbol_table: &HashMap<String, usize>,
 ) -> Result<BType, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
         return Err(WrongArguments);
@@ -229,7 +229,7 @@ mod tests {
     };
 
     #[test]
-    fn two_instructions() -> Result<(), AssemblerError> {
+    fn two_instructions() -> Result<(), AssemblerError<'_>> {
         let tokens = vec![
             Token::Identifier("add".to_string()),
             Token::Identifier("x1".to_string()),

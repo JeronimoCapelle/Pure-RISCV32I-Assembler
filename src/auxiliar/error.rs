@@ -10,6 +10,7 @@ pub struct AssemblerError {
     rust_location: &'static Location<'static>,
     assembly_stage: Stage,
     input_line_number: usize,
+    input_line: String,
     who: Responsible,
 }
 
@@ -17,21 +18,30 @@ impl Error for AssemblerError {}
 
 impl AssemblerError {
     #[track_caller]
-    pub const fn new(assembly_stage: Stage, input_line_number: usize) -> Self {
+    pub fn new(assembly_stage: Stage, input_line_number: usize) -> Self {
         Self {
             rust_location: Location::caller(),
             assembly_stage,
             input_line_number,
             who: Responsible::User,
+            input_line: "".to_string(),
         }
     }
-    pub const fn internal(assembly_stage: Stage) -> Self {
+    pub fn internal(assembly_stage: Stage) -> Self {
         Self {
             rust_location: Location::caller(),
             assembly_stage,
             who: Internal,
             input_line_number: 0,
+            input_line: "".to_string(),
         }
+    }
+    pub fn fill_line(&mut self, file: &str) {
+        self.input_line = file
+            .lines()
+            .nth(self.input_line_number - 1)
+            .unwrap()
+            .to_string();
     }
 }
 
@@ -39,8 +49,21 @@ impl fmt::Display for AssemblerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "[Error encountered, Fault:{:?}, Stage:{:?}, Location:{}, line:{} ]",
-            self.who, self.assembly_stage, self.rust_location, self.input_line_number
+            "
+[  Error encountered: {:?} ] ({:?})
+ 
+ --> line:{}
+    | 
+    |  {} 
+    |
+
+[ Location:{} ]
+",
+            self.assembly_stage,
+            self.who,
+            self.input_line_number,
+            self.input_line,
+            self.rust_location
         )
     }
 }

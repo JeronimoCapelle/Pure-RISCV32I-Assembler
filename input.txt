@@ -16,7 +16,7 @@ _loop:
     slli t0, a1, 2            # Multiply i by 4 to get word offset (Shift I-Type)
     add t1, sp, t0            # Add offset to base address
     sw a2, 0(t1)              # Store current sum into memory (S-Type)
-    lw t2, 0(t1)              # Load it right back to test LW (Memory I-Type)
+    lw t2, 0(t1),              # Load it right back to test LW (Memory I-Type)
 
     // Increment and jump
     addi a1, a1, 1            # i++
