@@ -113,3 +113,42 @@ pub fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError> {
 
     Ok(tokens)
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{auxiliar::token::Token, pipeline::_1_lexical_analysis::tokenize};
+
+    #[test]
+    fn empty() {
+        let output = match tokenize("") {
+            Err(a) => {
+                eprintln!("{a}");
+                return;
+            }
+            Ok(a) => a,
+        };
+        let expected = vec![Token::NewLine(1)];
+        assert_eq!(output, expected);
+    }
+
+    #[test]
+    fn instruction() {
+        let output = match tokenize("add x1,x2,x3") {
+            Err(a) => {
+                eprintln!("{a}");
+                return;
+            }
+            Ok(a) => a,
+        };
+        let expected = vec![
+            Token::Identifier("add".to_string()),
+            Token::Identifier("x1".to_string()),
+            Token::Comma,
+            Token::Identifier("x2".to_string()),
+            Token::Comma,
+            Token::Identifier("x3".to_string()),
+            Token::NewLine(1),
+        ];
+        assert_eq!(output, expected);
+    }
+}

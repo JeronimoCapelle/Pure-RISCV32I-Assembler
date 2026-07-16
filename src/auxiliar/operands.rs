@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::auxiliar::{
     convertion::{i128_to_i16, i128_to_i32, i128_to_u8, interpret_literal},
     error::SyntaxError::{
-        self, BiggerValue, Impossible, InvalidWord, NonExistentRegister, OddValue, SmallerValue,
+        self, BiggerValue, Internal, InvalidToken, NonExistentRegister, OddValue, SmallerValue,
         TexttoNumeric, Translation,
     },
     token::Token,
@@ -19,7 +19,7 @@ impl Immediate {
         let min = -2048;
 
         let Token::Literal(text) = token else {
-            return Err(InvalidWord(token.clone()));
+            return Err(InvalidToken(token.clone()));
         };
 
         let Ok(value) = interpret_literal(text) else {
@@ -35,7 +35,7 @@ impl Immediate {
         }
 
         let Ok(value) = i128_to_i16(value) else {
-            return Err(SyntaxError::Impossible);
+            return Err(SyntaxError::Internal);
         };
 
         Ok(Self(value))
@@ -54,7 +54,7 @@ impl Shamt {
         let min = 0;
 
         let Token::Literal(text) = token else {
-            return Err(InvalidWord(token.clone()));
+            return Err(InvalidToken(token.clone()));
         };
 
         let Ok(value) = interpret_literal(text) else {
@@ -70,7 +70,7 @@ impl Shamt {
         }
 
         let Ok(value) = i128_to_u8(value) else {
-            return Err(SyntaxError::Impossible);
+            return Err(SyntaxError::Internal);
         };
 
         Ok(Self(value))
@@ -88,7 +88,7 @@ impl Offset {
         let min = -2048;
 
         let Token::Literal(text) = token else {
-            return Err(InvalidWord(token.clone()));
+            return Err(InvalidToken(token.clone()));
         };
 
         let Ok(value) = interpret_literal(text) else {
@@ -104,7 +104,7 @@ impl Offset {
         }
 
         let Ok(value) = i128_to_i16(value) else {
-            return Err(SyntaxError::Impossible);
+            return Err(SyntaxError::Internal);
         };
 
         Ok(Self(value))
@@ -126,7 +126,7 @@ impl Label {
         let max = 4094;
 
         let Token::Identifier(text) = token else {
-            return Err(InvalidWord(token.clone()));
+            return Err(InvalidToken(token.clone()));
         };
 
         let symbol_pc = match symbol_table.get(text) {
@@ -135,11 +135,11 @@ impl Label {
         };
 
         let Ok(symbol_pc) = i128::try_from(symbol_pc) else {
-            return Err(Impossible);
+            return Err(Internal);
         };
 
         let Ok(current_pc) = i128::try_from(current_pc) else {
-            return Err(Impossible);
+            return Err(Internal);
         };
         let offset = symbol_pc - current_pc;
 
@@ -156,7 +156,7 @@ impl Label {
         }
 
         let Ok(offset) = i128_to_i16(offset) else {
-            return Err(SyntaxError::Impossible);
+            return Err(SyntaxError::Internal);
         };
 
         Ok(Self(offset))
@@ -178,7 +178,7 @@ impl BigLabel {
         let max = 1_048_574;
 
         let Token::Identifier(text) = token else {
-            return Err(InvalidWord(token.clone()));
+            return Err(InvalidToken(token.clone()));
         };
 
         let symbol_pc = match symbol_table.get(text) {
@@ -187,11 +187,11 @@ impl BigLabel {
         };
 
         let Ok(symbol_pc) = i128::try_from(symbol_pc) else {
-            return Err(Impossible);
+            return Err(Internal);
         };
 
         let Ok(current_pc) = i128::try_from(current_pc) else {
-            return Err(Impossible);
+            return Err(Internal);
         };
 
         let offset = symbol_pc - current_pc;
@@ -209,7 +209,7 @@ impl BigLabel {
         }
 
         let Ok(offset) = i128_to_i32(offset) else {
-            return Err(SyntaxError::Impossible);
+            return Err(SyntaxError::Internal);
         };
         Ok(Self(offset))
     }
@@ -258,7 +258,7 @@ pub enum Register {
 impl Register {
     pub fn new(token: &Token) -> Result<Self, SyntaxError> {
         let Token::Identifier(name) = token else {
-            return Err(InvalidWord(token.clone()));
+            return Err(InvalidToken(token.clone()));
         };
         Ok(match name.as_str() {
             "x0" | "zero" => Self::X0,

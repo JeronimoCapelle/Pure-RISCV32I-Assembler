@@ -1,6 +1,7 @@
+use core::fmt;
 use std::panic::Location;
 
-use crate::auxiliar::{error::Responsable::Internal, token::Token};
+use crate::auxiliar::{error::Responsible::Internal, token::Token};
 
 // ----
 
@@ -8,18 +9,18 @@ use crate::auxiliar::{error::Responsable::Internal, token::Token};
 pub struct AssemblerError {
     rust_location: &'static Location<'static>,
     assembly_stage: Stage,
-    offending_input_line_number: usize,
-    who: Responsable,
+    input_line_number: usize,
+    who: Responsible,
 }
 
 impl AssemblerError {
     #[track_caller]
-    pub const fn new(assembly_stage: Stage, offending_input_line_number: usize) -> Self {
+    pub const fn new(assembly_stage: Stage, input_line_number: usize) -> Self {
         Self {
             rust_location: Location::caller(),
             assembly_stage,
-            offending_input_line_number,
-            who: Responsable::User,
+            input_line_number,
+            who: Responsible::User,
         }
     }
     pub const fn internal(assembly_stage: Stage) -> Self {
@@ -27,13 +28,23 @@ impl AssemblerError {
             rust_location: Location::caller(),
             assembly_stage,
             who: Internal,
-            offending_input_line_number: 0,
+            input_line_number: 0,
         }
     }
 }
 
+impl fmt::Display for AssemblerError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "[Error encountered, Fault:{:?}, Stage:{:?}, Location:{}, line:{} ]",
+            self.who, self.assembly_stage, self.rust_location, self.input_line_number
+        )
+    }
+}
+
 #[derive(Debug)]
-pub enum Responsable {
+pub enum Responsible {
     Internal,
     User,
 }
@@ -43,7 +54,7 @@ pub enum Stage {
     Tokenizer,
     SymbolCollection,
     Syntax(SyntaxError),
-    MathematicalProof,
+    MathematicalBoundChecking,
 }
 
 #[derive(Debug)]
@@ -56,8 +67,8 @@ pub enum SyntaxError {
     NonExistentMnemonic(Token),
     WrongArguments,
     InvalidStartingWord(Token),
-    InvalidWord(Token),
+    InvalidToken(Token),
     Translation(Token),
-    Impossible,
+    Internal,
     Empty,
 }

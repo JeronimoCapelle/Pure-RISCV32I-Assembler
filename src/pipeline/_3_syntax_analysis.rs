@@ -4,7 +4,7 @@ use crate::auxiliar::{
     error::{
         AssemblerError,
         Stage::Syntax,
-        SyntaxError::{self, Empty, Impossible, WrongArguments},
+        SyntaxError::{self, Empty, Internal, WrongArguments},
     },
     instruction::{
         BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, STypeMemory,
@@ -29,7 +29,7 @@ pub fn parse(
         }
 
         let Token::NewLine(newline) = newline[0] else {
-            return Err(AssemblerError::internal(Syntax(Impossible)));
+            return Err(AssemblerError::internal(Syntax(Internal)));
         };
 
         let pc_counter = index * 4;
