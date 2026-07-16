@@ -1,5 +1,5 @@
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub(crate) enum Token {
+pub enum Token {
     Literal(String),
     Identifier(String),
 

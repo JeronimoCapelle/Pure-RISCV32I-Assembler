@@ -1,4 +1,4 @@
-use crate::auxiliar::{
+use crate::utils::{
     error::{AssemblerError, Stage::Tokenizer},
     token::Token,
 };
@@ -117,8 +117,8 @@ pub(super) fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError>
 #[cfg(test)]
 mod tests {
     use crate::{
-        auxiliar::{error::AssemblerError, token::Token},
         pipeline::_1_lexical_analysis::tokenize,
+        utils::{error::AssemblerError, token::Token},
     };
 
     #[test]

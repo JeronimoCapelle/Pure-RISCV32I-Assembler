@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::auxiliar::{
+use crate::utils::{
     error::{
         AssemblerError,
         Stage::{self, SymbolCollection},

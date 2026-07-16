@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::auxiliar::{
+use crate::utils::{
     error::{
         AssemblerError,
         Stage::Syntax,
@@ -219,17 +219,17 @@ mod tests {
     use std::collections::HashMap;
 
     use crate::{
-        auxiliar::{
+        pipeline::_3_syntax_analysis::parse,
+        utils::{
             error::AssemblerError,
             instruction::{IType, Instruction, RType},
             operands::{Immediate, Register},
             token::Token,
         },
-        pipeline::_3_syntax_analysis::parse,
     };
 
     #[test]
-    fn two_instructions() -> Result<(), AssemblerError<'_>> {
+    fn two_instructions() -> Result<(), AssemblerError> {
         let tokens = vec![
             Token::Identifier("add".to_string()),
             Token::Identifier("x1".to_string()),

@@ -1,4 +1,4 @@
-use crate::auxiliar::instruction::{
+use crate::utils::instruction::{
     BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, STypeMemory,
 };
 

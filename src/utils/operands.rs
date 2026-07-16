@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::auxiliar::{
+use crate::utils::{
     convertion::{i128_to_i16, i128_to_i32, i128_to_u8, interpret_literal},
     error::SyntaxError::{
         self, BiggerValue, Internal, InvalidToken, NonExistentRegister, OddValue, SmallerValue,
@@ -11,7 +11,7 @@ use crate::auxiliar::{
 
 //--------------------------------------------------
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
+pub struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
 
 impl Immediate {
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
@@ -46,7 +46,7 @@ impl Immediate {
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
+pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
 
 impl Shamt {
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
@@ -80,7 +80,7 @@ impl Shamt {
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
+pub struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
 
 impl Offset {
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
@@ -114,7 +114,7 @@ impl Offset {
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct Label(i16); //12-bit signed PC-relative offset. limit artificially. multiple of 2 bytes
+pub struct Label(i16); //12-bit signed PC-relative offset. limit artificially. multiple of 2 bytes
 
 impl Label {
     pub(crate) fn new(
@@ -162,11 +162,11 @@ impl Label {
         Ok(Self(offset))
     }
     pub(crate) const fn encode(&self) -> u32 {
-        ((self.0 >> 1) as u32) & 0b1111_1111_1111
+        ((self.0.cast_unsigned() >> 1) as u32) & 0b1111_1111_1111
     }
 }
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
+pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
 
 impl BigLabel {
     pub(crate) fn new(
@@ -215,12 +215,12 @@ impl BigLabel {
     }
 
     pub(crate) const fn encode(&self) -> u32 {
-        ((self.0 >> 1) as u32) & 0b1111_1111_1111_1111_1111
+        (self.0.cast_unsigned() >> 1) & 0b1111_1111_1111_1111_1111
     }
 }
 //--------------------------------------------------
 #[derive(PartialEq, Eq, Debug)]
-pub(crate) enum Register {
+pub enum Register {
     X0,
     X1,
     X2,
