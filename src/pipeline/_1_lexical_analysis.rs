@@ -116,30 +116,23 @@ pub fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{auxiliar::token::Token, pipeline::_1_lexical_analysis::tokenize};
+    use crate::{
+        auxiliar::{error::AssemblerError, token::Token},
+        pipeline::_1_lexical_analysis::tokenize,
+    };
 
     #[test]
-    fn empty() {
-        let output = match tokenize("") {
-            Err(a) => {
-                eprintln!("{a}");
-                return;
-            }
-            Ok(a) => a,
-        };
+    fn empty() -> Result<(), AssemblerError> {
+        let output = tokenize("")?;
         let expected = vec![Token::NewLine(1)];
         assert_eq!(output, expected);
+        Ok(())
     }
 
     #[test]
-    fn instruction() {
-        let output = match tokenize("add x1,x2,x3") {
-            Err(a) => {
-                eprintln!("{a}");
-                return;
-            }
-            Ok(a) => a,
-        };
+    fn simple_instruction() -> Result<(), AssemblerError> {
+        let output = tokenize("add x1,x2,x3")?;
+
         let expected = vec![
             Token::Identifier("add".to_string()),
             Token::Identifier("x1".to_string()),
@@ -150,5 +143,103 @@ mod tests {
             Token::NewLine(1),
         ];
         assert_eq!(output, expected);
+        Ok(())
     }
+
+    #[test]
+    fn simple_label() -> Result<(), AssemblerError> {
+        let output = tokenize("  label  :  ")?;
+        let expected = vec![
+            Token::Identifier("label".to_string()),
+            Token::Colon,
+            Token::NewLine(1),
+        ];
+        assert_eq!(output, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn instruction_and_label() -> Result<(), AssemblerError> {
+        let output = tokenize("add x1,    x2 ,x3\nlabel:")?;
+        let expected = vec![
+            Token::Identifier("add".to_string()),
+            Token::Identifier("x1".to_string()),
+            Token::Comma,
+            Token::Identifier("x2".to_string()),
+            Token::Comma,
+            Token::Identifier("x3".to_string()),
+            Token::NewLine(1),
+            Token::Identifier("label".to_string()),
+            Token::Colon,
+            Token::NewLine(2),
+        ];
+        assert_eq!(output, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn instruction_label_intstuction() -> Result<(), AssemblerError> {
+        let output = tokenize("add x1,    x2 ,x3\nlabel:\nxori x23,    sp ,300")?;
+        let expected = vec![
+            Token::Identifier("add".to_string()),
+            Token::Identifier("x1".to_string()),
+            Token::Comma,
+            Token::Identifier("x2".to_string()),
+            Token::Comma,
+            Token::Identifier("x3".to_string()),
+            Token::NewLine(1),
+            Token::Identifier("label".to_string()),
+            Token::Colon,
+            Token::NewLine(2),
+            Token::Identifier("xori".to_string()),
+            Token::Identifier("x23".to_string()),
+            Token::Comma,
+            Token::Identifier("sp".to_string()),
+            Token::Comma,
+            Token::Literal("300".to_string()),
+            Token::NewLine(3),
+        ];
+        assert_eq!(output, expected);
+        Ok(())
+    }
+
+    // #[test]
+    // fn complex_program() {
+    //     let output = match tokenize(
+    //         "
+    //     _start:
+    //         addi x1, x0, -2048
+    //         ori x2, x1, 255
+    //         xori x3, x2, -1
+    //         add x4, x1, x2
+    //         sub x5, x4, x3
+    //         slli x6, x5, 31
+    //         srli x7, x6, 15
+
+    //     _memory:
+    //         sw x7, 2044(x0)
+    //         sb x6, -2048(x1)
+    //         lw x8, 2044(x0)
+    //         lb x9, -2048(x1)
+
+    //     _branches:
+    //         beq x8, x9, _start //fails
+    //         bne x9, x8, _forward
+    //         blt x1, x2, _start
+    //         bge x2, x1, _forward
+
+    //     _forward:
+    //         jal x10, _end
+
+    //     _end:
+    //         jalr x0, 0(x10)",
+    //     ) {
+    //         Err(a) => {
+    //             eprintln!("{a}");
+    //             return;
+    //         }
+    //         Ok(a) => a,
+    //     };
+    //     panic!("{:?}", output);
+    // }
 }

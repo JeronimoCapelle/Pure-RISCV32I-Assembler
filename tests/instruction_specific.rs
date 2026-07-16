@@ -1,10 +1,11 @@
-use pure_rv32i::compile_string;
+use pure_rv32i::{auxiliar::error::AssemblerError, compile_string};
 
 #[test]
-fn add() {
-    let result = compile_string("add x1, x0, x2").unwrap();
+fn add() -> Result<(), AssemblerError> {
+    let result = compile_string("add x1, x0, x2")?;
     let expected = vec![0xb3, 0x00, 0x20, 0x00];
     assert_eq!(result, expected);
+    Ok(())
 }
 #[test]
 fn addi() {

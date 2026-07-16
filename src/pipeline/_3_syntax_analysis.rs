@@ -213,3 +213,56 @@ fn generate_rtype(operands: &[Token]) -> Result<RType, SyntaxError> {
         second_source: Register::new(&operands[4])?,
     })
 }
+
+#[cfg(test)]
+mod tests {
+    use std::collections::HashMap;
+
+    use crate::{
+        auxiliar::{
+            error::AssemblerError,
+            instruction::{IType, Instruction, RType},
+            operands::{Immediate, Register},
+            token::Token,
+        },
+        pipeline::_3_syntax_analysis::parse,
+    };
+
+    #[test]
+    fn two_instructions() -> Result<(), AssemblerError> {
+        let tokens = vec![
+            Token::Identifier("add".to_string()),
+            Token::Identifier("x1".to_string()),
+            Token::Comma,
+            Token::Identifier("x2".to_string()),
+            Token::Comma,
+            Token::Identifier("x3".to_string()),
+            Token::NewLine(1),
+            Token::Identifier("xori".to_string()),
+            Token::Identifier("x23".to_string()),
+            Token::Comma,
+            Token::Identifier("sp".to_string()),
+            Token::Comma,
+            Token::Literal("300".to_string()),
+            Token::NewLine(3),
+        ];
+        let output = parse(tokens.as_slice(), &HashMap::new())?;
+
+        let exepected = vec![
+            Instruction::ADD(RType {
+                destination: Register::X1,
+                first_source: Register::X2,
+                second_source: Register::X3,
+            }),
+            Instruction::XORI(IType {
+                destination: Register::X23,
+                source: Register::X2,
+                immediate: Immediate::new(&Token::Literal("300".to_string())).unwrap(),
+            }),
+        ];
+
+        assert_eq!(output, exepected);
+
+        Ok(())
+    }
+}

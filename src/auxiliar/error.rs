@@ -1,5 +1,5 @@
 use core::fmt;
-use std::panic::Location;
+use std::{error::Error, panic::Location};
 
 use crate::auxiliar::{error::Responsible::Internal, token::Token};
 
@@ -12,6 +12,8 @@ pub struct AssemblerError {
     input_line_number: usize,
     who: Responsible,
 }
+
+impl Error for AssemblerError {}
 
 impl AssemblerError {
     #[track_caller]

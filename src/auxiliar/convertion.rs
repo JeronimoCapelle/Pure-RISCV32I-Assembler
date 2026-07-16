@@ -43,10 +43,16 @@ pub fn interpret_literal(value: &str) -> Result<i128, ParseIntError> {
     };
 
     let _ = match value.strip_prefix("0") {
-        Some(a) => match i128::from_str_radix(a, 8) {
-            Ok(a) => return Ok(a),
-            Err(a) => return Err(a),
-        },
+        Some(a) => {
+            if a.is_empty() {
+                0
+            } else {
+                match i128::from_str_radix(a, 8) {
+                    Ok(a) => return Ok(a),
+                    Err(a) => return Err(a),
+                }
+            }
+        }
         _ => 0,
     };
 
