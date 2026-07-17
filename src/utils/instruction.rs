@@ -1,76 +1,76 @@
-use crate::utils::operands::{BigLabel, Immediate, Label, Offset, Register, Shamt};
+//! Module for every instruction type and its operands
+use crate::utils::operands::{BLabel, Immediate, JLabel, Offset, Register, Shamt};
 
 #[derive(PartialEq, Eq, Debug)]
-#[allow(clippy::upper_case_acronyms)]
 pub enum Instruction {
-    ADDI(IType),
-    ADD(RType),
-    SUB(RType),
-    BNE(BType),
-    BEQ(BType),
-    BLT(BType),
-    BGE(BType),
-    JAL(JType),
-    JALR(ITypeJump),
-    LW(ITypeMemory),
-    SW(STypeMemory),
-    LB(ITypeMemory),
-    SB(STypeMemory),
-    SLLI(ITypeShifts),
-    SRLI(ITypeShifts),
-    AND(RType),
-    OR(RType),
-    XOR(RType),
-    ANDI(IType),
-    ORI(IType),
-    XORI(IType),
+    Addi(IType),
+    Add(RType),
+    Sub(RType),
+    Bne(BType),
+    Beq(BType),
+    Blt(BType),
+    Bge(BType),
+    Jal(JType),
+    Jalr(ITypeJump),
+    Lw(ITypeMemory),
+    Sw(STypeMemory),
+    Lb(ITypeMemory),
+    Sb(STypeMemory),
+    Slli(ITypeShifts),
+    Srli(ITypeShifts),
+    And(RType),
+    Or(RType),
+    Xor(RType),
+    Andi(IType),
+    Ori(IType),
+    Xori(IType),
 }
 
 //--------------------------------------------------
 #[derive(PartialEq, Eq, Debug)]
 pub struct RType {
-    pub destination: Register,
-    pub first_source: Register,
-    pub second_source: Register,
+    pub rd: Register,
+    pub rs1: Register,
+    pub rs2: Register,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct IType {
-    pub destination: Register,
-    pub source: Register,
-    pub immediate: Immediate,
+    pub rd: Register,
+    pub rs1: Register,
+    pub imm: Immediate,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct ITypeShifts {
-    pub destination: Register,
-    pub source: Register,
+    pub rd: Register,
+    pub rs1: Register,
     pub shamt: Shamt,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct ITypeMemory {
-    pub destination: Register,
+    pub rd: Register,
     pub offset: Offset,
-    pub base_address: Register,
+    pub rs1: Register,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct STypeMemory {
-    pub source: Register,
+    pub rd: Register,
     pub offset: Offset,
-    pub base_address: Register,
+    pub rs1: Register,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct BType {
-    pub first_source: Register,
-    pub second_source: Register,
-    pub label: Label,
+    pub rs1: Register,
+    pub rs2: Register,
+    pub blabel: BLabel,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct JType {
-    pub destination: Register,
-    pub big_label: BigLabel,
+    pub rd: Register,
+    pub jlabel: JLabel,
 }
 #[derive(PartialEq, Eq, Debug)]
 pub struct ITypeJump {
-    pub destination: Register,
+    pub rd: Register,
     pub offset: Offset,
-    pub target_address: Register,
+    pub rs1: Register,
 }

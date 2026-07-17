@@ -1,19 +1,22 @@
+//! module containing all the operands for the instructions
+
 use std::collections::HashMap;
 
 use crate::utils::{
-    convertion::{i128_to_i16, i128_to_i32, i128_to_u8, interpret_literal},
     error::SyntaxError::{
         self, BiggerValue, Internal, InvalidToken, NonExistentRegister, OddValue, SmallerValue,
         TexttoNumeric, Translation,
     },
+    parsing::interpret_literal,
     token::Token,
 };
 
-//--------------------------------------------------
+/// 12-bit signed integer (range: -2048 to 2047). Used by ``IType``
 #[derive(PartialEq, Eq, Debug)]
-pub struct Immediate(i16); // 12-bit signed integer (range: -2048 to 2047). Limit artificially
+pub struct Immediate(i16);
 
 impl Immediate {
+    /// Creates an Immediate from a Literal Token, is bound checked.
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 2047;
         let min = -2048;
@@ -34,21 +37,22 @@ impl Immediate {
             return Err(SmallerValue(min, value));
         }
 
-        let Ok(value) = i128_to_i16(value) else {
-            return Err(SyntaxError::Internal);
-        };
+        let value = i16::try_from(value).map_err(|_| SyntaxError::Internal)?;
 
         Ok(Self(value))
     }
-
-    pub(crate) const fn encode(&self) -> u32 {
-        (self.0.cast_unsigned() as u32) & 0b1111_1111_1111
+    /// Encodes the Immediate value into a 12-bit signed integer
+    pub(crate) fn encode(&self) -> u32 {
+        (u32::from(self.0.cast_unsigned())) & 0b1111_1111_1111
     }
 }
+
+/// 5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Used by ``ITypeShifts``
 #[derive(PartialEq, Eq, Debug)]
-pub struct Shamt(u8); //5-bit unsigned integer (range: 0 to 31 for 32-bit registers). Limit artificially
+pub struct Shamt(u8);
 
 impl Shamt {
+    /// Creates an Shamt from a Literal Token, is bound checked.
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 31;
         let min = 0;
@@ -69,20 +73,21 @@ impl Shamt {
             return Err(SmallerValue(min, value));
         }
 
-        let Ok(value) = i128_to_u8(value) else {
-            return Err(SyntaxError::Internal);
-        };
+        let value = u8::try_from(value).map_err(|_| SyntaxError::Internal)?;
 
         Ok(Self(value))
     }
+    /// Encodes the Immediate value into a 5-bit unsigned integer
     pub(crate) fn encode(&self) -> u32 {
         u32::from(self.0)
     }
 }
+///12-bit signed immediate offset (range: -2048 to 2047 bytes). Used by ``ITypeMemory``, ``STypeMemory`` and ``ITypeJump``
 #[derive(PartialEq, Eq, Debug)]
-pub struct Offset(i16); //12-bit signed immediate offset (range: -2048 to 2047 bytes). Limit artificially
+pub struct Offset(i16);
 
 impl Offset {
+    /// Creates an Offset from a Literal Token, is bound checked.
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 2047;
         let min = -2048;
@@ -103,20 +108,21 @@ impl Offset {
             return Err(SmallerValue(min, value));
         }
 
-        let Ok(value) = i128_to_i16(value) else {
-            return Err(SyntaxError::Internal);
-        };
+        let value = i16::try_from(value).map_err(|_| SyntaxError::Internal)?;
 
         Ok(Self(value))
     }
-    pub(crate) const fn encode(&self) -> u32 {
-        (self.0.cast_unsigned() as u32) & 0b1111_1111_1111
+    /// Encodes the Offset value into a 12-bit signed integer
+    pub(crate) fn encode(&self) -> u32 {
+        (u32::from(self.0.cast_unsigned())) & 0b1111_1111_1111
     }
 }
+///12-bit signed PC-relative offset, multiple of 2 bytes. Used by ``BType``
 #[derive(PartialEq, Eq, Debug)]
-pub struct Label(i16); //12-bit signed PC-relative offset. limit artificially. multiple of 2 bytes
+pub struct BLabel(i16);
 
-impl Label {
+impl BLabel {
+    /// Creates a ``BLabel`` from an Identifier Token and a ``symbol_table``, is bound checked.
     pub(crate) fn new(
         token: &Token,
         symbol_table: &HashMap<String, usize>,
@@ -141,7 +147,10 @@ impl Label {
         let Ok(current_pc) = i128::try_from(current_pc) else {
             return Err(Internal);
         };
-        let offset = symbol_pc - current_pc;
+
+        let Some(offset) = symbol_pc.checked_sub(current_pc) else {
+            return Err(Internal);
+        };
 
         if offset % 2 != 0 {
             return Err(OddValue(offset));
@@ -155,20 +164,21 @@ impl Label {
             return Err(BiggerValue(max, offset));
         }
 
-        let Ok(offset) = i128_to_i16(offset) else {
-            return Err(SyntaxError::Internal);
-        };
+        let offset = i16::try_from(offset).map_err(|_| SyntaxError::Internal)?;
 
         Ok(Self(offset))
     }
-    pub(crate) const fn encode(&self) -> u32 {
-        ((self.0.cast_unsigned() >> 1) as u32) & 0b1111_1111_1111
+    /// Encodes the ``BLabel`` value into a 12-bit signed integer, implicit 0 bit is truncated
+    pub(crate) fn encode(&self) -> u32 {
+        (u32::from(self.0.cast_unsigned() >> 1)) & 0b1111_1111_1111
     }
 }
+///20-bit signed PC-relative offset, multiple of 2 bytes. Used by ``JType``
 #[derive(PartialEq, Eq, Debug)]
-pub struct BigLabel(i32); //20-bit signed PC-relative offset. Limit artificially. multiple of 2 bytes
+pub struct JLabel(i32);
 
-impl BigLabel {
+impl JLabel {
+    /// Creates a ``JLabel`` from an Identifier Token and a ``symbol_table``, is bound checked.
     pub(crate) fn new(
         token: &Token,
         symbol_table: &HashMap<String, usize>,
@@ -194,7 +204,9 @@ impl BigLabel {
             return Err(Internal);
         };
 
-        let offset = symbol_pc - current_pc;
+        let Some(offset) = symbol_pc.checked_sub(current_pc) else {
+            return Err(Internal);
+        };
 
         if offset % 2 != 0 {
             return Err(OddValue(offset));
@@ -208,12 +220,11 @@ impl BigLabel {
             return Err(BiggerValue(max, offset));
         }
 
-        let Ok(offset) = i128_to_i32(offset) else {
-            return Err(SyntaxError::Internal);
-        };
+        let offset = i32::try_from(offset).map_err(|_| SyntaxError::Internal)?;
+
         Ok(Self(offset))
     }
-
+    /// Encodes the ``JLabel`` value into a 12-bit signed integer, implicit 0 bit is truncated
     pub(crate) const fn encode(&self) -> u32 {
         (self.0.cast_unsigned() >> 1) & 0b1111_1111_1111_1111_1111
     }

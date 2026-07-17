@@ -28,7 +28,7 @@ _exit:
     xori t4, t3, -1           # Test negative immediate
     and t5, t4, a2            # Test AND
     or t6, t5, a0             # Test OR
-    srli a3, t6, 1            # Test Logical Right Shift
+    srli a3, t6, -1          # Test Logical Right Shift
 
     // Test Jump Register
     jalr zero, 0(ra)          # Halt / Return (I-Type Jump)

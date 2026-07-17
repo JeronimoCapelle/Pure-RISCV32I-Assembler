@@ -1,3 +1,4 @@
+//! Third step of the pipeline, Parsing token lines into individual instructions, as well as computing label offsets
 use std::collections::HashMap;
 
 use crate::utils::{
@@ -9,20 +10,25 @@ use crate::utils::{
     instruction::{
         BType, IType, ITypeJump, ITypeMemory, ITypeShifts, Instruction, JType, RType, STypeMemory,
     },
-    operands::{BigLabel, Immediate, Label, Offset, Register, Shamt},
+    operands::{BLabel, Immediate, JLabel, Offset, Register, Shamt},
     token::Token,
 };
 
+/// Parses ``cleaned_tokens`` stream along with ``symbol_table`` into the corresponding ``instructions`` structs, as well as resolving label offsets
 pub(super) fn parse(
-    tokens: &[Token],
+    cleaned_tokens: &[Token],
     symbol_table: &HashMap<String, usize>,
 ) -> Result<Vec<Instruction>, AssemblerError> {
-    let mut statements: Vec<Instruction> = Vec::new();
-    for (index, line) in tokens
+    let mut instructions: Vec<Instruction> = Vec::new();
+    for (index, line) in cleaned_tokens
         .split_inclusive(|t| matches!(t, Token::NewLine(_)))
         .enumerate()
     {
-        let (line, newline) = line.split_at(line.len() - 1);
+        let Some(line_split) = line.len().checked_sub(1) else {
+            return Err(AssemblerError::internal(Syntax(Internal)));
+        };
+
+        let (line, newline) = line.split_at(line_split);
 
         if line.is_empty() {
             return Err(AssemblerError::internal(Syntax(Internal)));
@@ -32,18 +38,21 @@ pub(super) fn parse(
             return Err(AssemblerError::internal(Syntax(Internal)));
         };
 
-        let pc_counter = index * 4;
-
-        let instruction = match parse_statement(line, symbol_table, pc_counter) {
-            Ok(a) => a,
-            Err(err) => return Err(AssemblerError::new(Syntax(err), newline)),
+        let Some(pc_counter) = index.checked_mul(4) else {
+            return Err(AssemblerError::internal(Syntax(Internal)));
         };
-        statements.push(instruction);
+
+        let instruction = match parse_instruction(line, symbol_table, pc_counter) {
+            Ok(a) => a,
+            Err(err) => return Err(AssemblerError::new_user(Syntax(err), newline)),
+        };
+        instructions.push(instruction);
     }
-    Ok(statements)
+    Ok(instructions)
 }
 
-fn parse_statement(
+/// Parses individual token line into its instruction
+fn parse_instruction(
     tokens: &[Token],
     symbol_table: &HashMap<String, usize>,
     pc_counter: usize,
@@ -55,34 +64,34 @@ fn parse_statement(
     let operands = &tokens[1..];
 
     Ok(match mnemonic.as_str() {
-        "add" => Instruction::ADD(generate_rtype(operands)?),
-        "sub" => Instruction::SUB(generate_rtype(operands)?),
-        "or" => Instruction::OR(generate_rtype(operands)?),
-        "and" => Instruction::AND(generate_rtype(operands)?),
-        "xor" => Instruction::XOR(generate_rtype(operands)?),
+        "add" => Instruction::Add(generate_rtype(operands)?),
+        "sub" => Instruction::Sub(generate_rtype(operands)?),
+        "or" => Instruction::Or(generate_rtype(operands)?),
+        "and" => Instruction::And(generate_rtype(operands)?),
+        "xor" => Instruction::Xor(generate_rtype(operands)?),
 
-        "addi" => Instruction::ADDI(generate_itype(operands)?),
-        "andi" => Instruction::ANDI(generate_itype(operands)?),
-        "xori" => Instruction::XORI(generate_itype(operands)?),
-        "ori" => Instruction::ORI(generate_itype(operands)?),
+        "addi" => Instruction::Addi(generate_itype(operands)?),
+        "andi" => Instruction::Andi(generate_itype(operands)?),
+        "xori" => Instruction::Xori(generate_itype(operands)?),
+        "ori" => Instruction::Ori(generate_itype(operands)?),
 
-        "slli" => Instruction::SLLI(generate_itype_shifts(operands)?),
-        "srli" => Instruction::SRLI(generate_itype_shifts(operands)?),
+        "slli" => Instruction::Slli(generate_itype_shifts(operands)?),
+        "srli" => Instruction::Srli(generate_itype_shifts(operands)?),
 
-        "lw" => Instruction::LW(generate_itype_memory(operands)?),
-        "lb" => Instruction::LB(generate_itype_memory(operands)?),
+        "lw" => Instruction::Lw(generate_itype_memory(operands)?),
+        "lb" => Instruction::Lb(generate_itype_memory(operands)?),
 
-        "sw" => Instruction::SW(generate_stype_memory(operands)?),
-        "sb" => Instruction::SB(generate_stype_memory(operands)?),
+        "sw" => Instruction::Sw(generate_stype_memory(operands)?),
+        "sb" => Instruction::Sb(generate_stype_memory(operands)?),
 
-        "beq" => Instruction::BEQ(generate_btype(operands, pc_counter, symbol_table)?),
-        "bne" => Instruction::BNE(generate_btype(operands, pc_counter, symbol_table)?),
-        "blt" => Instruction::BLT(generate_btype(operands, pc_counter, symbol_table)?),
-        "bge" => Instruction::BGE(generate_btype(operands, pc_counter, symbol_table)?),
+        "beq" => Instruction::Beq(generate_btype(operands, pc_counter, symbol_table)?),
+        "bne" => Instruction::Bne(generate_btype(operands, pc_counter, symbol_table)?),
+        "blt" => Instruction::Blt(generate_btype(operands, pc_counter, symbol_table)?),
+        "bge" => Instruction::Bge(generate_btype(operands, pc_counter, symbol_table)?),
 
-        "jal" => Instruction::JAL(generate_jtype(operands, pc_counter, symbol_table)?),
+        "jal" => Instruction::Jal(generate_jtype(operands, pc_counter, symbol_table)?),
 
-        "jalr" => Instruction::JALR(generate_itype_jump(operands)?),
+        "jalr" => Instruction::Jalr(generate_itype_jump(operands)?),
 
         _ => {
             return Err(SyntaxError::NonExistentMnemonic(mnemonic.to_owned()));
@@ -102,8 +111,8 @@ fn generate_jtype(
     }
 
     Ok(JType {
-        destination: Register::new(&operands[0])?,
-        big_label: BigLabel::new(&operands[2], symbol_table, pc_counter)?,
+        rd: Register::new(&operands[0])?,
+        jlabel: JLabel::new(&operands[2], symbol_table, pc_counter)?,
     })
 }
 
@@ -117,9 +126,9 @@ fn generate_btype(
     }
 
     Ok(BType {
-        first_source: Register::new(&operands[0])?,
-        second_source: Register::new(&operands[2])?,
-        label: Label::new(&operands[4], symbol_table, pc_counter)?,
+        rs1: Register::new(&operands[0])?,
+        rs2: Register::new(&operands[2])?,
+        blabel: BLabel::new(&operands[4], symbol_table, pc_counter)?,
     })
 }
 
@@ -133,9 +142,9 @@ fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, SyntaxError>
     }
 
     Ok(STypeMemory {
-        source: Register::new(&operands[0])?,
+        rd: Register::new(&operands[0])?,
         offset: Offset::new(&operands[2])?,
-        base_address: Register::new(&operands[4])?,
+        rs1: Register::new(&operands[4])?,
     })
 }
 
@@ -149,9 +158,9 @@ fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, SyntaxError>
     }
 
     Ok(ITypeMemory {
-        destination: Register::new(&operands[0])?,
+        rd: Register::new(&operands[0])?,
         offset: Offset::new(&operands[2])?,
-        base_address: Register::new(&operands[4])?,
+        rs1: Register::new(&operands[4])?,
     })
 }
 
@@ -161,8 +170,8 @@ fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, SyntaxError>
     }
 
     Ok(ITypeShifts {
-        destination: Register::new(&operands[0])?,
-        source: Register::new(&operands[2])?,
+        rd: Register::new(&operands[0])?,
+        rs1: Register::new(&operands[2])?,
         shamt: Shamt::new(&operands[4])?,
     })
 }
@@ -174,15 +183,15 @@ fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, SyntaxError> {
         && operands[5].eq(&Token::ClosingParenthesis)
     {
         return Ok(ITypeJump {
-            destination: Register::new(&operands[0])?,
+            rd: Register::new(&operands[0])?,
             offset: Offset::new(&operands[2])?,
-            target_address: Register::new(&operands[4])?,
+            rs1: Register::new(&operands[4])?,
         });
     } else if operands.len() == 5 && operands[1].eq(&Token::Comma) && operands[3].eq(&Token::Comma)
     {
         return Ok(ITypeJump {
-            destination: Register::new(&operands[0])?,
-            target_address: Register::new(&operands[2])?,
+            rd: Register::new(&operands[0])?,
+            rs1: Register::new(&operands[2])?,
             offset: Offset::new(&operands[4])?,
         });
     }
@@ -196,9 +205,9 @@ fn generate_itype(operands: &[Token]) -> Result<IType, SyntaxError> {
     }
 
     Ok(IType {
-        destination: Register::new(&operands[0])?,
-        source: Register::new(&operands[2])?,
-        immediate: Immediate::new(&operands[4])?,
+        rd: Register::new(&operands[0])?,
+        rs1: Register::new(&operands[2])?,
+        imm: Immediate::new(&operands[4])?,
     })
 }
 
@@ -208,9 +217,9 @@ fn generate_rtype(operands: &[Token]) -> Result<RType, SyntaxError> {
     }
 
     Ok(RType {
-        destination: Register::new(&operands[0])?,
-        first_source: Register::new(&operands[2])?,
-        second_source: Register::new(&operands[4])?,
+        rd: Register::new(&operands[0])?,
+        rs1: Register::new(&operands[2])?,
+        rs2: Register::new(&operands[4])?,
     })
 }
 
@@ -231,33 +240,33 @@ mod tests {
     #[test]
     fn two_instructions() -> Result<(), AssemblerError> {
         let tokens = vec![
-            Token::Identifier("add".to_string()),
-            Token::Identifier("x1".to_string()),
+            Token::Identifier("add".to_owned()),
+            Token::Identifier("x1".to_owned()),
             Token::Comma,
-            Token::Identifier("x2".to_string()),
+            Token::Identifier("x2".to_owned()),
             Token::Comma,
-            Token::Identifier("x3".to_string()),
+            Token::Identifier("x3".to_owned()),
             Token::NewLine(1),
-            Token::Identifier("xori".to_string()),
-            Token::Identifier("x23".to_string()),
+            Token::Identifier("xori".to_owned()),
+            Token::Identifier("x23".to_owned()),
             Token::Comma,
-            Token::Identifier("sp".to_string()),
+            Token::Identifier("sp".to_owned()),
             Token::Comma,
-            Token::Literal("300".to_string()),
+            Token::Literal("300".to_owned()),
             Token::NewLine(3),
         ];
         let output = parse(tokens.as_slice(), &HashMap::new())?;
 
         let exepected = vec![
-            Instruction::ADD(RType {
-                destination: Register::X1,
-                first_source: Register::X2,
-                second_source: Register::X3,
+            Instruction::Add(RType {
+                rd: Register::X1,
+                rs1: Register::X2,
+                rs2: Register::X3,
             }),
-            Instruction::XORI(IType {
-                destination: Register::X23,
-                source: Register::X2,
-                immediate: Immediate::new(&Token::Literal("300".to_string())).unwrap(),
+            Instruction::Xori(IType {
+                rd: Register::X23,
+                rs1: Register::X2,
+                imm: Immediate::new(&Token::Literal("300".to_string())).unwrap(),
             }),
         ];
 

@@ -1,3 +1,4 @@
+//! Second step of the pipeline, extracting labels and empty lines from the token stream and creating the symbol table.
 use std::collections::HashMap;
 
 use crate::utils::{
@@ -8,6 +9,7 @@ use crate::utils::{
     token::Token,
 };
 
+/// Populates the ``symbol_table`` and also strips non-instruction lines from the token vector
 pub(super) fn collect_symbols(
     tokens: &[Token],
 ) -> Result<(HashMap<String, usize>, Vec<Token>), AssemblerError> {
@@ -23,13 +25,18 @@ pub(super) fn collect_symbols(
 
             // TODO: WE ARE ASSUMING (if (not empty) and (not label) then inst) <= this could be false!!!
         } else if line.len() != 1 {
-            pc_counter += 4;
+            pc_counter = match pc_counter.checked_add(4) {
+                Some(a) => a,
+                None => return Err(AssemblerError::internal(SymbolCollection)),
+            };
+
             symbol_free_tokens.append(&mut line.to_vec());
         }
     }
     Ok((symbol_table, symbol_free_tokens))
 }
 
+/// attempts to extract the label string
 fn get_label(line: &[Token]) -> Result<String, AssemblerError> {
     let Token::Identifier(name) = &line[0] else {
         let Some(last_token) = line.last() else {
@@ -40,7 +47,10 @@ fn get_label(line: &[Token]) -> Result<String, AssemblerError> {
             return Err(AssemblerError::internal(SymbolCollection));
         };
 
-        return Err(AssemblerError::new(Stage::SymbolCollection, *line_number));
+        return Err(AssemblerError::new_user(
+            Stage::SymbolCollection,
+            *line_number,
+        ));
     };
     Ok(name.clone())
 }

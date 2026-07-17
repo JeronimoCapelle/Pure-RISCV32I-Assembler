@@ -13,18 +13,47 @@ categories = ["command-line-utilities","embedded","development-tools","encoding"
 [dependencies]
 
 [lints.rust]
-rust_2018_idioms = { level = "warn", priority = -1 }
+# missing_docs = "forbid"
+rust_2018_idioms = "forbid"
 unsafe_code = "forbid"
-missing_docs = "warn"
 
 [lints.clippy]
-all = { level = "deny", priority = -2 }
-pedantic = { level = "warn", priority = -2 }
-nursery = { level = "warn", priority = -2 }
-unwrap_used = "deny"
-expect_used = "deny"
-panic = "deny"
-too_many_lines = "warn"
+
+pedantic = "forbid"
+nursery = "forbid"
+cargo = "forbid"
+
+
+unwrap_used = "forbid"
+expect_used = "forbid"
+panic = "forbid"
+todo = "forbid"
+unimplemented = "forbid"
+reachable = "forbid"
+
+
+as_conversions = "forbid"         
+clone_on_ref_ptr = "forbid"       
+str_to_string = "forbid"          
+alloc_instead_of_core = "forbid"  
+std_instead_of_core = "forbid"    
+
+
+arithmetic_side_effects = "forbid" 
+float_cmp_const = "forbid"         
+
+
+print_stdout = "forbid"        
+print_stderr = "forbid"       
+dbg_macro = "forbid"          
+
+
+# missing_docs_in_private_items = "forbid" 
+# missing_inline_in_public_items = "forbid"
+unseparated_literal_suffix = "forbid"  
+
+all =  "forbid"
+too_many_lines = "forbid"
 
 
 

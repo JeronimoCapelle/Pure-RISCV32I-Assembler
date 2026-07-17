@@ -1,8 +1,10 @@
+//! First step in the assmebly pipeline, turning the program string into tokens
 use crate::utils::{
     error::{AssemblerError, Stage::Tokenizer},
     token::Token,
 };
 
+/// Turns a program string into its respective tokens, strips comments
 pub(super) fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError> {
     let contents: Vec<char> = contents_str.chars().collect();
 
@@ -103,7 +105,7 @@ pub(super) fn tokenize(contents_str: &str) -> Result<Vec<Token>, AssemblerError>
                 i += end;
             }
             _ => {
-                return Err(AssemblerError::new(Tokenizer, line_count + 1));
+                return Err(AssemblerError::new_user(Tokenizer, line_count + 1));
             }
         }
     }
