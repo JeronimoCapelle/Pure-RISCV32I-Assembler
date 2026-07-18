@@ -10,51 +10,45 @@ license = "CC0-1.0"
 keywords = ["parser", "cli", "terminal","rust", "embedded"]
 categories = ["command-line-utilities","embedded","development-tools","encoding","parser-implementations"]
 
+format_code_in_doc_comments = true
+group_imports = "StdExternalCrate"
+reorder_impl_items = true
+
 [dependencies]
 
 [lints.rust]
-# missing_docs = "forbid"
-rust_2018_idioms = "forbid"
+rust_2018_idioms = { level = "deny", priority = -1 }
 unsafe_code = "forbid"
 
 [lints.clippy]
-
-pedantic = "forbid"
-nursery = "forbid"
-cargo = "forbid"
-
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+cargo = { level = "deny", priority = -1 }
 
 unwrap_used = "forbid"
 expect_used = "forbid"
 panic = "forbid"
 todo = "forbid"
 unimplemented = "forbid"
-reachable = "forbid"
+unreachable = "forbid" 
 
 
-as_conversions = "forbid"         
+as_conversions = "deny"
 clone_on_ref_ptr = "forbid"       
-str_to_string = "forbid"          
-alloc_instead_of_core = "forbid"  
-std_instead_of_core = "forbid"    
+str_to_string = "deny"         
+alloc_instead_of_core = "deny" 
+std_instead_of_core = "deny"
 
-
-arithmetic_side_effects = "forbid" 
+arithmetic_side_effects = "deny"
 float_cmp_const = "forbid"         
-
 
 print_stdout = "forbid"        
 print_stderr = "forbid"       
 dbg_macro = "forbid"          
 
-
-missing_docs_in_private_items = "forbid" 
-missing_inline_in_public_items = "forbid"
+missing_docs_in_private_items = "warn" 
 unseparated_literal_suffix = "forbid"  
-
-all =  "forbid"
-too_many_lines = "forbid"
-
+too_many_lines = "deny"
 
 
 [profile.dev]

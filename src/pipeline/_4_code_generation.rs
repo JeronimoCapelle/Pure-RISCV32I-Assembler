@@ -7,7 +7,9 @@ pub const SUB_FUNCT3: u32 = 0b000;
 pub const BEQ_FUNCT3: u32 = 0b000;
 pub const BNE_FUNCT3: u32 = 0b001;
 pub const BLT_FUNCT3: u32 = 0b100;
+pub const BLTU_FUNCT3: u32 = 0b110;
 pub const BGE_FUNCT3: u32 = 0b101;
+pub const BGEU_FUNCT3: u32 = 0b111;
 pub const JALR_FUNCT3: u32 = 0b000;
 pub const XORI_FUNCT3: u32 = 0b100;
 pub const XOR_FUNCT3: u32 = 0b100;
@@ -21,15 +23,17 @@ pub const SW_FUNCT3: u32 = 0b010;
 pub const LW_FUNCT3: u32 = 0b010;
 pub const SLLI_FUNCT3: u32 = 0b001;
 pub const SRLI_FUNCT3: u32 = 0b101;
+pub const SRAI_FUNCT3: u32 = 0b101;
 
 // funct7
 pub const ADD_FUNCT7: u32 = 0b000_0000;
-pub const SUB_FUNCT7: u32 = 0b100_000;
-pub const OR_FUNCT7: u32 = 0b000_000;
-pub const XOR_FUNCT7: u32 = 0b000_000;
-pub const AND_FUNCT7: u32 = 0b000_000;
-pub const SLLI_FUNCT7: u32 = 0b000_000;
-pub const SRLI_FUNCT7: u32 = 0b000_000;
+pub const SUB_FUNCT7: u32 = 0b010_0000;
+pub const OR_FUNCT7: u32 = 0b000_0000;
+pub const XOR_FUNCT7: u32 = 0b000_0000;
+pub const AND_FUNCT7: u32 = 0b000_0000;
+pub const SLLI_FUNCT7: u32 = 0b000_0000;
+pub const SRLI_FUNCT7: u32 = 0b000_0000;
+pub const SRAI_FUNCT7: u32 = 0b010_0000;
 
 // opcode
 pub const RTYPE_OPCODE: u32 = 0b011_0011;
@@ -242,6 +246,27 @@ fn encode_instruction(instruction: Instruction) -> u32 {
         Instruction::Auipc(utype) => {
             encode_utype(AUIPC_OPCODE, utype.rd.encode(), utype.constant.encode())
         }
+        Instruction::Bltu(btype) => encode_btype(
+            BTYPE_OPCODE,
+            btype.blabel.encode(),
+            BLTU_FUNCT3,
+            btype.rs1.encode(),
+            btype.rs2.encode(),
+        ),
+        Instruction::Bgeu(btype) => encode_btype(
+            BTYPE_OPCODE,
+            btype.blabel.encode(),
+            BGEU_FUNCT3,
+            btype.rs1.encode(),
+            btype.rs2.encode(),
+        ),
+        Instruction::Srai(itype_shifts) => encode_itype(
+            ITYPE_SHIFTS_OPCODE,
+            itype_shifts.rd.encode(),
+            SRAI_FUNCT3,
+            itype_shifts.rs1.encode(),
+            itype_shifts.shamt.encode() | SRAI_FUNCT7 << 5,
+        ),
     }
 }
 

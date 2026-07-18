@@ -105,6 +105,12 @@ fn srli() {
     assert_eq!(result, expected);
 }
 
+#[test]
+fn srai() {
+    let result = assemble_string("srai x16, x31,30").unwrap();
+    let expected = vec![0x13, 0xd8, 0xef, 0x41];
+    assert_eq!(result, expected);
+}
 // ---- labels -----
 
 #[test]
@@ -133,7 +139,18 @@ fn blt() {
     let expected = vec![0x63, 0x42, 0xf8, 0x01];
     assert_eq!(result, expected);
 }
-
+#[test]
+fn bltu() {
+    let result = assemble_string("bltu x16, x31,START \n START:").unwrap();
+    let expected = vec![0x63, 0x62, 0xf8, 0x01];
+    assert_eq!(result, expected);
+}
+#[test]
+fn bgeu() {
+    let result = assemble_string("bgeu x16, x31,START \n START:").unwrap();
+    let expected = vec![0x63, 0x72, 0xf8, 0x01];
+    assert_eq!(result, expected);
+}
 #[test]
 fn jal() {
     let result = assemble_string("jal x16,START \n START:").unwrap();

@@ -25,17 +25,11 @@ pub(super) fn parse(
         .split_inclusive(|t| matches!(t, Token::NewLine(_)))
         .enumerate()
     {
-        let Some(line_split) = line.len().checked_sub(1) else {
+        let Some((newline, line)) = line.split_last() else {
             return Err(AssemblerError::internal(Syntax(Internal)));
         };
 
-        let (line, newline) = line.split_at(line_split);
-
-        if line.is_empty() {
-            return Err(AssemblerError::internal(Syntax(Internal)));
-        }
-
-        let Token::NewLine(newline) = newline[0] else {
+        let Token::NewLine(newline) = newline else {
             return Err(AssemblerError::internal(Syntax(Internal)));
         };
 
@@ -44,9 +38,10 @@ pub(super) fn parse(
         };
 
         let instruction = match parse_instruction(line, symbol_table, pc_counter) {
+            Err(err) => return Err(AssemblerError::new_user(Syntax(err), *newline)),
             Ok(a) => a,
-            Err(err) => return Err(AssemblerError::new_user(Syntax(err), newline)),
         };
+
         instructions.push(instruction);
     }
     Ok(instructions)
@@ -78,6 +73,7 @@ fn parse_instruction(
 
         "slli" => Instruction::Slli(generate_itype_shifts(operands)?),
         "srli" => Instruction::Srli(generate_itype_shifts(operands)?),
+        "srai" => Instruction::Srai(generate_itype_shifts(operands)?),
 
         "lw" => Instruction::Lw(generate_itype_memory(operands)?),
         "lb" => Instruction::Lb(generate_itype_memory(operands)?),
@@ -89,6 +85,8 @@ fn parse_instruction(
         "bne" => Instruction::Bne(generate_btype(operands, pc_counter, symbol_table)?),
         "blt" => Instruction::Blt(generate_btype(operands, pc_counter, symbol_table)?),
         "bge" => Instruction::Bge(generate_btype(operands, pc_counter, symbol_table)?),
+        "bgeu" => Instruction::Bgeu(generate_btype(operands, pc_counter, symbol_table)?),
+        "bltu" => Instruction::Bltu(generate_btype(operands, pc_counter, symbol_table)?),
 
         "jal" => Instruction::Jal(generate_jtype(operands, pc_counter, symbol_table)?),
 

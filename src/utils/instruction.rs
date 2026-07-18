@@ -18,6 +18,7 @@ pub enum Instruction {
     // ---
     Slli(ITypeShifts),
     Srli(ITypeShifts),
+    Srai(ITypeShifts),
 
     // ---
     Jalr(ITypeJump),
@@ -35,6 +36,8 @@ pub enum Instruction {
     Bne(BType),
     Blt(BType),
     Bge(BType),
+    Bltu(BType),
+    Bgeu(BType),
 
     // ---
     Lui(UType),
