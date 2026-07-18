@@ -23,7 +23,6 @@ pub const SLLI_FUNCT3: u32 = 0b001;
 pub const SRLI_FUNCT3: u32 = 0b101;
 
 // funct7
-pub const ADDI_FUNCT7: u32 = 0b000_0000;
 pub const ADD_FUNCT7: u32 = 0b000_0000;
 pub const SUB_FUNCT7: u32 = 0b100_000;
 pub const OR_FUNCT7: u32 = 0b000_000;
@@ -33,15 +32,16 @@ pub const SLLI_FUNCT7: u32 = 0b000_000;
 pub const SRLI_FUNCT7: u32 = 0b000_000;
 
 // opcode
-pub const RTYPE_OPCODE: u32 = 51;
-pub const BTYPE_OPCODE: u32 = 99;
-pub const JTYPE_OPCODE: u32 = 111;
-pub const ITYPE_OPCODE: u32 = 19;
-pub const ITYPE_SHIFTS_OPCODE: u32 = 19;
-pub const ITYPE_MEMORY_OPCODE: u32 = 3;
-pub const ITYPE_JUMP_OPCODE: u32 = 103;
-pub const STYPE_MEMORY_OPCODE: u32 = 35;
+pub const RTYPE_OPCODE: u32 = 0b011_0011;
+pub const BTYPE_OPCODE: u32 = 0b110_0011;
+pub const JTYPE_OPCODE: u32 = 0b110_1111;
+pub const ITYPE_OPCODE: u32 = 0b001_0011;
+pub const ITYPE_SHIFTS_OPCODE: u32 = 0b001_0011;
+pub const ITYPE_MEMORY_OPCODE: u32 = 0b000_0011;
+pub const ITYPE_JUMP_OPCODE: u32 = 0b110_0111;
+pub const STYPE_MEMORY_OPCODE: u32 = 0b010_0011;
 pub const LUI_OPCODE: u32 = 0b011_0111;
+pub const AUIPC_OPCODE: u32 = 0b001_0111;
 
 use crate::utils::instruction::Instruction;
 
@@ -239,16 +239,14 @@ fn encode_instruction(instruction: Instruction) -> u32 {
         Instruction::Lui(utype) => {
             encode_utype(LUI_OPCODE, utype.rd.encode(), utype.constant.encode())
         }
+        Instruction::Auipc(utype) => {
+            encode_utype(AUIPC_OPCODE, utype.rd.encode(), utype.constant.encode())
+        }
     }
 }
-pub const fn encode_rtype(
-    opcode: u32,
-    rd: u32,
-    funct3: u32,
-    rs1: u32,
-    rs2: u32,
-    funct7: u32,
-) -> u32 {
+
+/// encodes ``RType`` instruction structs into its binary packed form according to RV32I
+const fn encode_rtype(opcode: u32, rd: u32, funct3: u32, rs1: u32, rs2: u32, funct7: u32) -> u32 {
     let rd = rd << 7;
     let funct3 = funct3 << 12;
     let rs1 = rs1 << 15;
@@ -257,8 +255,8 @@ pub const fn encode_rtype(
 
     funct7 | rs2 | rs1 | funct3 | rd | opcode
 }
-
-pub const fn encode_itype(opcode: u32, rd: u32, funct3: u32, rs1: u32, imm: u32) -> u32 {
+/// encodes ``IType`` instruction structs into its binary packed form according to RV32I
+const fn encode_itype(opcode: u32, rd: u32, funct3: u32, rs1: u32, imm: u32) -> u32 {
     let rd = rd << 7;
     let funct3 = funct3 << 12;
     let rs1 = rs1 << 15;
@@ -266,8 +264,8 @@ pub const fn encode_itype(opcode: u32, rd: u32, funct3: u32, rs1: u32, imm: u32)
 
     imm | rs1 | funct3 | rd | opcode
 }
-
-pub const fn encode_stype(opcode: u32, imm: u32, funct3: u32, rs1: u32, rs2: u32) -> u32 {
+/// encodes ``SType`` instruction structs into its binary packed form according to RV32I
+const fn encode_stype(opcode: u32, imm: u32, funct3: u32, rs1: u32, rs2: u32) -> u32 {
     let imm_1 = (imm & 0b11111) << 7;
     let funct3 = funct3 << 12;
     let rs1 = rs1 << 15;
@@ -276,8 +274,8 @@ pub const fn encode_stype(opcode: u32, imm: u32, funct3: u32, rs1: u32, rs2: u32
 
     imm_2 | rs2 | rs1 | funct3 | imm_1 | opcode
 }
-
-pub const fn encode_btype(opcode: u32, imm: u32, funct3: u32, rs1: u32, rs2: u32) -> u32 {
+/// encodes ``BType`` instruction structs into its binary packed form according to RV32I
+const fn encode_btype(opcode: u32, imm: u32, funct3: u32, rs1: u32, rs2: u32) -> u32 {
     let imm_1 = ((imm >> 10) & 0b1) << 7;
     let imm_2 = (imm & 0b1111) << 8;
     let funct3 = funct3 << 12;
@@ -289,7 +287,8 @@ pub const fn encode_btype(opcode: u32, imm: u32, funct3: u32, rs1: u32, rs2: u32
     imm_4 | imm_3 | rs2 | rs1 | funct3 | imm_2 | imm_1 | opcode
 }
 
-pub const fn encode_jtype(opcode: u32, rd: u32, imm: u32) -> u32 {
+/// encodes ``JType`` instruction structs into its binary packed form according to RV32I
+const fn encode_jtype(opcode: u32, rd: u32, imm: u32) -> u32 {
     let rd = rd << 7;
     let label_1 = ((imm >> 11) & 0b1111_1111) << 12;
     let label_2 = ((imm >> 10) & 0b1) << 20;
@@ -299,7 +298,8 @@ pub const fn encode_jtype(opcode: u32, rd: u32, imm: u32) -> u32 {
     label_4 | label_3 | label_2 | label_1 | rd | opcode
 }
 
-pub const fn encode_utype(opcode: u32, rd: u32, imm: u32) -> u32 {
+/// encodes ``UType`` instruction structs into its binary packed form according to RV32I
+const fn encode_utype(opcode: u32, rd: u32, imm: u32) -> u32 {
     let rd = rd << 7;
     let imm = imm << 12;
 

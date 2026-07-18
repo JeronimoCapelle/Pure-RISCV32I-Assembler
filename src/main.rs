@@ -10,7 +10,7 @@ fn main() {
 
     let Some(input_filename) = args.next() else {
         eprintln!("Error:\n\nNo filename provided, try: \n\n{program_name} {{your_program.s}}\n");
-        return;
+        std::process::exit(1);
     };
 
     let file_contents = match std::fs::read_to_string(&input_filename) {
@@ -20,7 +20,7 @@ fn main() {
                 "\n\tCouldnt read the file: {}\n\tBecause:\n\t{a}",
                 &input_filename
             );
-            return;
+            std::process::exit(1);
         }
     };
 
@@ -28,7 +28,7 @@ fn main() {
         Ok(a) => a,
         Err(a) => {
             eprintln!("{a}");
-            return;
+            std::process::exit(1);
         }
     };
 
@@ -41,18 +41,19 @@ fn main() {
 
     let output_file = format!("{output_filename}.bin");
 
-    let mut file = match std::fs::File::create(output_filename) {
+    let mut file = match std::fs::File::create(&output_file) {
         Ok(a) => a,
         Err(a) => {
-            println!("{a}");
-            return;
+            eprintln!("{a}");
+            std::process::exit(1);
         }
     };
 
     if let Err(a) = file.write_all(binary.as_slice()) {
-        println!("{a}");
+        eprintln!("{a}");
+        std::process::exit(1);
     }
 
-    println!("Binary successfully written to output.bin");
+    println!("Binary successfully written to {}", &output_file);
     println!("Exiting...");
 }

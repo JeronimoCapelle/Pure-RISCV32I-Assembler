@@ -95,6 +95,7 @@ fn parse_instruction(
         "jalr" => Instruction::Jalr(generate_itype_jump(operands)?),
 
         "lui" => Instruction::Lui(generate_utype(operands)?),
+        "auipc" => Instruction::Auipc(generate_utype(operands)?),
         _ => {
             return Err(SyntaxError::NonExistentMnemonic(mnemonic.to_owned()));
         }
@@ -103,6 +104,7 @@ fn parse_instruction(
 
 // ---
 
+/// generate a ``JType`` instruction struct from provided ``instruction`` ``operands`` and ``symbol_table``
 fn generate_jtype(
     operands: &[Token],
     pc_counter: usize,
@@ -118,6 +120,7 @@ fn generate_jtype(
     })
 }
 
+/// generate a ``BType`` instruction struct from provided ``instruction`` ``operands`` and ``symbol_table``
 fn generate_btype(
     operands: &[Token],
     pc_counter: usize,
@@ -134,6 +137,7 @@ fn generate_btype(
     })
 }
 
+/// generate a ``STypeMemory`` instruction struct from provided ``instruction`` ``operands``
 fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, SyntaxError> {
     if operands.len() != 6
         || !operands[1].eq(&Token::Comma)
@@ -150,6 +154,7 @@ fn generate_stype_memory(operands: &[Token]) -> Result<STypeMemory, SyntaxError>
     })
 }
 
+/// generate a ``ITypeMemory`` instruction struct from provided ``instruction`` ``operands``
 fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, SyntaxError> {
     if operands.len() != 6
         || !operands[1].eq(&Token::Comma)
@@ -166,6 +171,7 @@ fn generate_itype_memory(operands: &[Token]) -> Result<ITypeMemory, SyntaxError>
     })
 }
 
+/// generate a ``ITypeShift`` instruction struct from provided ``instruction`` ``operands``
 fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
         return Err(WrongArguments);
@@ -178,6 +184,7 @@ fn generate_itype_shifts(operands: &[Token]) -> Result<ITypeShifts, SyntaxError>
     })
 }
 
+/// generate a ``ITypeJump`` instruction struct from provided ``instruction`` ``operands``
 fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, SyntaxError> {
     if operands.len() == 6
         && operands[1].eq(&Token::Comma)
@@ -201,6 +208,7 @@ fn generate_itype_jump(operands: &[Token]) -> Result<ITypeJump, SyntaxError> {
     Err(WrongArguments)
 }
 
+/// generate a ``IType`` instruction struct from provided ``instruction`` ``operands``
 fn generate_itype(operands: &[Token]) -> Result<IType, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
         return Err(WrongArguments);
@@ -213,6 +221,7 @@ fn generate_itype(operands: &[Token]) -> Result<IType, SyntaxError> {
     })
 }
 
+/// generate a ``RType`` instruction struct from provided ``instruction`` ``operands``
 fn generate_rtype(operands: &[Token]) -> Result<RType, SyntaxError> {
     if operands.len() != 5 || !operands[1].eq(&Token::Comma) || !operands[3].eq(&Token::Comma) {
         return Err(WrongArguments);
@@ -225,6 +234,7 @@ fn generate_rtype(operands: &[Token]) -> Result<RType, SyntaxError> {
     })
 }
 
+/// generate a ``UType`` instruction struct from provided ``instruction`` ``operands``
 fn generate_utype(operands: &[Token]) -> Result<UType, SyntaxError> {
     if operands.len() != 3 || !operands[1].eq(&Token::Comma) {
         return Err(WrongArguments);

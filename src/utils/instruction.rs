@@ -3,28 +3,45 @@ use crate::utils::operands::{BLabel, Constant, Immediate, JLabel, Offset, Regist
 
 #[derive(PartialEq, Eq, Debug)]
 pub enum Instruction {
-    Addi(IType),
     Add(RType),
     Sub(RType),
-    Bne(BType),
-    Beq(BType),
-    Blt(BType),
-    Bge(BType),
-    Jal(JType),
-    Jalr(ITypeJump),
-    Lw(ITypeMemory),
-    Sw(STypeMemory),
-    Lb(ITypeMemory),
-    Sb(STypeMemory),
+    Xor(RType),
+    Or(RType),
+    And(RType),
+
+    //---
+    Addi(IType),
+    Xori(IType),
+    Ori(IType),
+    Andi(IType),
+
+    // ---
     Slli(ITypeShifts),
     Srli(ITypeShifts),
-    And(RType),
-    Or(RType),
-    Xor(RType),
-    Andi(IType),
-    Ori(IType),
-    Xori(IType),
+
+    // ---
+    Jalr(ITypeJump),
+
+    // ---
+    Lw(ITypeMemory),
+    Lb(ITypeMemory),
+
+    // ---
+    Sb(STypeMemory),
+    Sw(STypeMemory),
+
+    // ---
+    Beq(BType),
+    Bne(BType),
+    Blt(BType),
+    Bge(BType),
+
+    // ---
     Lui(UType),
+    Auipc(UType),
+
+    // ---
+    Jal(JType),
 }
 
 //--------------------------------------------------

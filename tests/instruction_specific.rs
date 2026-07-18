@@ -155,3 +155,10 @@ fn lui() {
     let expected = vec![0x37, 0x45, 0x06, 0x00];
     assert_eq!(result, expected);
 }
+
+#[test]
+fn auipc() {
+    let result = assemble_string("auipc x10,100").unwrap();
+    let expected = vec![0x17, 0x45, 0x06, 0x00];
+    assert_eq!(result, expected);
+}

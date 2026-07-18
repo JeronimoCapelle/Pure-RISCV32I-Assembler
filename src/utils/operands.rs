@@ -229,11 +229,13 @@ impl JLabel {
         (self.0.cast_unsigned() >> 1) & 0xFFFFF
     }
 }
+///20-bit unsigned constant. Used by ``UType`` (range: 0 to 0xFFFFFF bytes).
 #[derive(PartialEq, Eq, Debug)]
 
 pub struct Constant(u32); //20-bit constant
 
 impl Constant {
+    /// Creates a Constant from a Literal Token, is bound checked.
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let max = 0xFFFFF;
         let min = 0;
@@ -258,50 +260,115 @@ impl Constant {
 
         Ok(Self(value))
     }
-    pub(crate) fn encode(&self) -> u32 {
+    /// Encodes the ``Constant`` value into a 20-bit unsigned integer.
+    pub(crate) const fn encode(&self) -> u32 {
         self.0 & 0xFFFFF
     }
 }
 //--------------------------------------------------
+/// Enum containing all possible Register values, from X0 to X31
 #[derive(PartialEq, Eq, Debug)]
 #[repr(u32)]
 pub enum Register {
+    /// "x0" | "zero" register
     X0,
+
+    /// "x1" | "ra" register
     X1,
+
+    /// "x2" | "sp" register
     X2,
+
+    /// "x3" | "gp" register
     X3,
+
+    /// "x4" | "tp" register
     X4,
+
+    /// "x5" | "t0" regiser
     X5,
+
+    /// "x6" | "t1" register
     X6,
+
+    /// "x7" | "t2" register
     X7,
+
+    /// "x8" | "fp" | "s0" register
     X8,
+
+    /// "x9" | "s1" register
     X9,
+
+    /// "x10" | "a0" register
     X10,
+
+    /// "x11" | "a1" register
     X11,
+
+    /// "x12" | "a2" register
     X12,
+
+    /// "x13" | "a3" register
     X13,
+
+    /// "x14" | "a4" register
     X14,
+
+    /// "x15" | "a5" register
     X15,
+
+    /// "x16" | "a6" register
     X16,
+
+    /// "x17" | "a7" register
     X17,
+
+    /// "x18" | "s2" register
     X18,
+
+    /// "x19" | "s3" register
     X19,
+
+    /// "x20" | "s4" register
     X20,
+
+    /// "x21" | "s5" register
     X21,
+
+    /// "x22" | "s6" register
     X22,
+
+    /// "x23" | "s7" register
     X23,
+
+    /// "x24" | "s8" register
     X24,
+
+    /// "x25" | "s9" register
     X25,
+
+    /// "x26" | "s10" register
     X26,
+
+    /// "x27" | "s11" register
     X27,
+
+    /// "x28" | "t3" register
     X28,
+
+    /// "x29" | "t4" register
     X29,
+
+    /// "x30" | "t5" register
     X30,
+
+    /// "x31" | "t6" register
     X31,
 }
 
 impl Register {
-    /// Creates a new integer enum from the given Indentifier Token, accepts aliases.
+    /// Creates a new integer enum from the given Identifier Token, accepts aliases.
     pub(crate) fn new(token: &Token) -> Result<Self, SyntaxError> {
         let Token::Identifier(name) = token else {
             return Err(InvalidToken(token.clone()));
